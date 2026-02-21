@@ -210,7 +210,7 @@ export const PopupEditor: React.FC = () => {
   const [showAddLayerMenu, setShowAddLayerMenu] = useState(false);
 
   // Saving & Status
-  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>(id ? 'saved' : 'unsaved');
   const [lastSavedTime, setLastSavedTime] = useState<string>('14:32');
   const [showToast, setShowToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
   const [isPublished, setIsPublished] = useState(false);
@@ -545,27 +545,54 @@ export const PopupEditor: React.FC = () => {
   };
 
   const confirmPublish = async () => {
-    if (!popupId) return;
     setShowPublishModal(false);
 
     try {
-      // First save everything to ensure latest state
-      await supabase
-        .from('popups')
-        .update({
-          name: popupName,
-          type: popupType,
-          layers: layers,
-          trigger_config: triggerConfig,
-          actions_config: actions,
-          status: 'active',
-          published_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', popupId);
+      let currentPopupId = popupId;
+
+      if (!currentPopupId) {
+        // Popup ainda não existe no banco — criar agora
+        const { data, error } = await supabase
+          .from('popups')
+          .insert([{
+            site_id: siteId,
+            name: popupName,
+            status: 'active',
+            type: popupType,
+            layers,
+            trigger_config: triggerConfig,
+            actions_config: actions,
+            published_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        currentPopupId = data.id;
+        setPopupId(data.id);
+        navigate(`/popups/editor/${data.id}`, { replace: true });
+      } else {
+        // Já existe: apenas atualizar
+        const { error } = await supabase
+          .from('popups')
+          .update({
+            name: popupName,
+            type: popupType,
+            layers,
+            trigger_config: triggerConfig,
+            actions_config: actions,
+            status: 'active',
+            published_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentPopupId);
+
+        if (error) throw error;
+      }
 
       setIsPublished(true);
-      setShowToast({ message: 'Popup publicado!✅', type: 'success' });
+      setSaveStatus('saved');
+      setShowToast({ message: 'Popup publicado! ✅', type: 'success' });
       setTimeout(() => setShowToast(null), 4000);
     } catch (err) {
       console.error('Publish error:', err);

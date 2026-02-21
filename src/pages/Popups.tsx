@@ -9,6 +9,7 @@ import {
 import { Popup } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { getOrCreateDefaultSite } from '../lib/sites';
 
 // Removed mockPopups
 
@@ -91,14 +92,13 @@ export const Popups: React.FC = () => {
       if (!user) return;
       setIsLoading(true);
       try {
-        // First get site (assuming single site for now or handling in sites.ts)
-        const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id).single();
+        const site = await getOrCreateDefaultSite(user.id);
 
-        if (sites) {
+        if (site) {
           const { data, error } = await supabase
             .from('popups')
             .select('*')
-            .eq('site_id', sites.id)
+            .eq('site_id', site.id)
             .order('created_at', { ascending: false });
 
           if (error) throw error;
