@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadSense Tracker — Página de Teste</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 24px;
+            background: #0f0f0f;
+            color: #00ff88;
+        }
+
+        h1 {
+            color: #fff;
+        }
+
+        pre {
+            background: #1a1a1a;
+            padding: 16px;
+            border-radius: 8px;
+            overflow: auto;
+        }
+
+        .ok {
+            color: #00ff88;
+        }
+
+        .error {
+            color: #ff4444;
+        }
+
+        .info {
+            color: #88aaff;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 LeadSense Tracker — Teste de Integração</h1>
+    <p>Abra o Console do Browser (F12) para ver os logs do tracker.</p>
+    <pre id="output">Aguardando inicialização...</pre>
+
+    <!-- Snippet de instalação do Tracker -->
+    <script>
+        (function (w, d, s, token) {
+            var ls = w.LeadSense = w.LeadSense || {};
+            ls._token = token;
+            ls._queue = [];
+            ls.track = function () { ls._queue.push(Array.prototype.slice.call(arguments)); };
+            ls.identify = function () { ls._queue.push(['identify'].concat(Array.prototype.slice.call(arguments))); };
+            var sc = d.createElement(s);
+            sc.src = '../dist/tracker.js';
+            sc.async = true;
+            sc.setAttribute('data-token', token);
+            d.head.appendChild(sc);
+
+            sc.onload = function () {
+                var out = document.getElementById('output');
+                var lines = [];
+
+                lines.push('<span class="ok">✅ tracker.js carregado</span>');
+                lines.push('<span class="info">window.LeadSense._ready: ' + w.LeadSense._ready + '</span>');
+                lines.push('<span class="info">window.LeadSense._token: ' + (w.LeadSense._token ? '✅ presente' : '❌ ausente') + '</span>');
+
+                var profile = w.LeadSense.getProfile();
+                if (profile) {
+                    lines.push('<span class="ok">✅ Profile carregado</span>');
+                    lines.push('   visitor_id: ' + profile.visitor_id);
+                    lines.push('   session_id: ' + profile.session_id);
+                    lines.push('   is_returning: ' + profile.is_returning);
+                    lines.push('   session_count: ' + profile.session_count);
+                } else {
+                    lines.push('<span class="error">❌ Profile não encontrado</span>');
+                }
+
+                out.innerHTML = lines.join('\n');
+            };
+        })(window, document, 'script', 'test-token-local-dev-12345');
+    </script>
+</body>
+
+</html>

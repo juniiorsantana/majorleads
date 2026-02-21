@@ -1,0 +1,39 @@
+{
+  "name": "majorleads",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:tracker": "vite build --config vite.tracker.config.ts",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
+  },
+  "dependencies": {
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@supabase/supabase-js": "^2.97.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lenis": "^1.3.17",
+    "lucide-react": "^0.574.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.0",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.0",
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/ui": "^4.0.18",
+    "jsdom": "^28.1.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^4.0.18"
+  }
+}

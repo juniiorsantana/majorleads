@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadSense Tracker Demo</title>
+    <!-- Tracker Snippet -->
+    <script>
+        (function (w, d, s, token) {
+            var ls = w.LeadSense = w.LeadSense || {};
+            ls._token = token;
+            ls._queue = [];
+            ls.track = function () { ls._queue.push(arguments); };
+            ls.identify = function () { ls._queue.push(['identify'].concat([].slice.call(arguments))); };
+            var sc = d.createElement(s);
+            sc.src = '/dist/tracker/tracker.iife.js';
+            sc.async = true;
+            sc.setAttribute('data-token', token);
+            d.head.appendChild(sc);
+        })(window, document, 'script', 'DEMO_TOKEN_123');
+    </script>
+</head>
+
+<body style="font-family: sans-serif; padding: 20px;">
+    <h1>Tracker Demo Page</h1>
+    <p>Open console to see tracking logs.</p>
+
+    <button id="btn-buy" class="btn-primary">Buy Now</button>
+    <br><br>
+    <a href="#" id="link-more">Read More</a>
+
+    <div style="height: 2000px; background: linear-gradient(to bottom, #f0f0f0, #ccc);">
+        Scroll down to test scroll tracking...
+    </div>
+</body>
+
+</html>

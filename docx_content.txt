@@ -1,0 +1,471 @@
+MAJORLEADS
+Página de Vendas — Copy Completa com Especificações Visuais
+Versão 1.0  |  Fevereiro 2026  |  Confidencial
+SOBRE ESTE DOCUMENTO
+Este documento contém a copy completa da página de vendas do MajorLeads, organizada seção por seção. Cada bloco de texto vem acompanhado de especificações visuais detalhadas — cores, tipografia, animações, efeitos e comportamentos de interação — para que o agente de frontend possa implementar com precisão.
+Legenda dos blocos:
+⚙  Bloco VERDE = Especificação Visual/Técnica
+✦  Bloco AZUL = Animações e Efeitos
+00  —  NAVEGAÇÃO — NAVBAR FIXA
+Estrutura da Navbar
+A navbar é fixa no topo (position: fixed), aparece em todas as seções e tem comportamento de scroll.
+Lado esquerdo — Logo
+MajorLeads
+→ &apos;Major&apos; em branco, &apos;Leads&apos; em verde (#00C47A)
+→ Fonte Syne 800, 1.25rem
+Lado direito — CTA
+Botão: &quot;Começar grátis&quot;
+→ Fundo verde #00C47A, texto preto
+→ Fonte Syne Bold, 0.8rem
+Links centrais (desktop only):  Como funciona  |  Funcionalidades  |  Preços
+⚙  Especificações Visuais — Navbar
+  •  Background: rgba(8,11,16,0.85) com backdrop-filter: blur(20px)
+  •  Border-bottom: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 20px 60px (desktop) / 16px 24px (mobile)
+  •  Altura: 68px
+  •  Z-index: 100
+  •  Cor dos links: #6B7A8F → hover: #E8EDF5 (transition 0.2s)
+  •  Letter-spacing dos links: 0.08em, text-transform: uppercase, font-size: 0.75rem
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Ao scrollar 80px para baixo: adicionar box-shadow: 0 4px 32px rgba(0,0,0,0.4)
+  ↳  Logo: hover com opacity 0.8, transition 0.2s
+  ↳  Botão CTA: hover com opacity 0.85 + translateY(-1px)
+  ↳  Mobile: links somem, aparece ícone hamburguer (menu drawer lateral)
+01  —  HERO — DOBRA PRINCIPAL
+▶  PLATAFORMA DE INTELIGÊNCIA DE VISITANTES
+HEADLINE PRINCIPAL:
+Cada visitante
+tem um nome.
+Descubra qual.
+SUBTÍTULO:
+MajorLeads rastreia, enriquece e converte visitantes anônimos em leads identificados — com popups inteligentes que aparecem na hora certa, para a pessoa certa.
+CTAs:
+CTA PRIMÁRIO (botão cheio):
+&quot;Testar 14 dias grátis →&quot;
+Fundo: #00C47A  |  Texto: #080B10  |  Padding: 16px 36px
+CTA SECUNDÁRIO (ghost/link):
+&quot;↓ Ver como funciona&quot;
+Sem background  |  Hover: color #E8EDF5
+⚙  Especificações Visuais — Hero
+  •  Layout: flex-column, align-center, justify-center, min-height: 100vh
+  •  Padding: 140px 40px 80px
+  •  Background: #080B10 com radial-gradient verde sutil no centro (rgba(0,229,160,0.07))
+  •  Badge: border 1px rgba(0,196,122,0.3), padding 6px 16px, font-size 0.7rem, uppercase, letter-spacing 0.12em
+  •  Badge tem bolinha pulsante verde antes do texto
+  •  Headline: font Syne 800, clamp(3rem, 8vw, 6.5rem), line-height 0.95, letter-spacing -0.04em
+  •  &apos;tem um nome.&apos; em Instrument Serif Italic, cor #00C47A
+  •  Subtítulo: DM Mono, 0.95rem, line-height 1.7, color #6B7A8F, max-width 520px
+  •  Botões: gap 16px entre eles
+  •  Ruído de textura (noise overlay) em toda a página com opacity 0.4, pointer-events none
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Badge: aparecer com fadeUp 0.6s
+  ↳  H1: aparecer com fadeUp 0.7s, delay 0.1s
+  ↳  Subtítulo: fadeUp 0.7s, delay 0.2s
+  ↳  Botões: fadeUp 0.7s, delay 0.3s
+  ↳  Badge bolinha: animation pulse (escala + opacity), 2s infinite
+  ↳  Botão primário hover: opacity 0.88 + translateY(-2px) + box-shadow 0 0 40px rgba(0,229,160,0.15)
+  ↳  CTA ghost hover: color muda de #6B7A8F para #E8EDF5
+  ↳  Background radial-gradient posicionado 50% / -60% (ligeiramente acima do centro)
+  ↳  Parallax sutil no gradiente ao mover o mouse (translateX/Y de até 20px)
+02  —  STATS BAR — PROVA SOCIAL NUMÉRICA
+Faixa horizontal logo abaixo do hero. 4 métricas em destaque.
++ 20%
+> 40%
+> 8%
+500+
+TAXA DE CONVERSÃO MÉDIA
+VISITAS COM PERFIL ENRIQUECIDO
+CTR DOS POPUPS
+SITES COM SCRIPT ATIVO
+⚙  Especificações Visuais — Stats Bar
+  •  Background: #0D1117
+  •  Border-top e border-bottom: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 32px 60px
+  •  Gap entre stats: 80px (desktop) / 40px (mobile, flex-wrap)
+  •  Número: Syne 800, 2rem, color #00C47A, letter-spacing -0.03em
+  •  Label: DM Mono, 0.7rem, uppercase, letter-spacing 0.1em, color #6B7A8F
+  •  Margin-top da label: 4px
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Toda a barra aparece com fadeUp 0.7s, delay 0.5s
+  ↳  Números: counter animation ao entrar no viewport (de 0 até o valor final, duração 1.5s, easing ease-out)
+  ↳  Hover em cada stat: sutil escala 1.03 no número
+03  —  TICKER — COMPATIBILIDADE DE PLATAFORMAS
+Faixa de texto em loop infinito mostrando as plataformas compatíveis. Sem interação do usuário.
+TEXTO DO TICKER (repetido 2x para loop contínuo):
+WordPress  ✦  Shopify  ✦  Hotmart  ✦  Kiwify  ✦  Webflow  ✦  Wix  ✦  HTML puro  ✦  Next.js  ✦  Nuxt  ✦  React
+⚙  Especificações Visuais — Ticker
+  •  Background: #141922
+  •  Border-top e border-bottom: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 14px 0
+  •  overflow: hidden
+  •  Itens separados por &apos;✦&apos; em cor #00C47A, font-size 0.5rem
+  •  Texto: DM Mono, 0.7rem, uppercase, letter-spacing 0.1em, color #6B7A8F
+  •  O ✦ separador é o único elemento com cor de destaque
+✦  ANIMAÇÕES & EFEITOS
+  ↳  animation: translateX de 0 até -50% (loop infinito), duração 18s, linear
+  ↳  O conteúdo é duplicado para criar ilusão de loop perfeito
+  ↳  Sem pause on hover nesta versão (movimento contínuo)
+  ↳  Fade de gradiente nas bordas esquerda e direita (mask-image: linear-gradient) para criar efeito de desvanecimento
+04  —  COMO FUNCIONA — 4 PASSOS
+▶  COMO FUNCIONA
+Cole um script.
+Ganhe inteligência.
+OS 4 PASSOS:
+01
+Instale o script em 30 segundos
+Cole uma linha de JavaScript no <head> do seu site. Funciona em qualquer plataforma que aceite código customizado. Nenhuma dependência, nenhum framework necessário.
+02
+Rastreamos e enriquecemos os dados
+Capturamos UTMs, comportamento, IP, dispositivo e histórico de sessão. Cada visitante ganha um perfil único e enriquecido automaticamente — sem ele preencher nada.
+03
+Popups inteligentes convertem
+Configure gatilhos por intenção de saída, scroll, tempo na página ou inatividade. A mensagem certa aparece para o perfil certo, na hora certa.
+04
+Dashboard com insights reais
+Veja leads capturados, UTM sources, dispositivos, conversão por popup e feed de atividade recente — tudo em tempo real, sem precisar de analytics externo.
+SNIPPET DE CÓDIGO (lado direito — card escuro):
+// Cole no <head> do seu site
+<script>
+  window.MajorLeads = { token: &quot;SEU_TOKEN&quot; };
+</script>
+<script async src=&quot;cdn.majorleads.io/tracker.js&quot;>
+</script>
+// Identificar lead manualmente
+MajorLeads.identify({
+  name:  &quot;João Silva&quot;,
+  email: &quot;joao@email.com&quot;,
+});
+⚙  Especificações Visuais — Como Funciona
+  •  Layout: 2 colunas (passos + card de código), gap 80px, align-items: center
+  •  Background da seção: #0D1117 (levemente diferente do hero)
+  •  Border-top e border-bottom: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 100px 60px
+  •  Número dos passos: DM Mono, 0.65rem, bold, color #00C47A
+  •  Título do passo: Syne 700, 1rem
+  •  Descrição do passo: DM Mono, 0.8rem, line-height 1.7, color #6B7A8F
+  •  Separador entre passos: border-bottom 1px rgba(255,255,255,0.07)
+  •  Card de código: background #141922, border-top 2px gradient (#00C47A → #0077FF)
+  •  Bolinhas de janela no card: vermelho #FF5F56, amarelo #FFBD2E, verde #27C93F (10px, border-radius 50%)
+  •  Syntax highlight: keywords roxo #A78BFA, strings verde #34D399, funções azul #60A5FA, comentários cinza #4B5563
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Os 4 passos: reveal com fadeUp escalonado (delay 0s, 0.1s, 0.2s, 0.3s) ao entrar no viewport
+  ↳  Card de código: aparecer com fadeUp + borderLeft grow animation
+  ↳  Linha do cursor piscante no final do snippet (::after com animation blink 1s infinite)
+  ↳  Hover em cada passo: leve background rgba(0,196,122,0.04) + o número escala para 1.1
+  ↳  Typing animation opcional: o código aparece letra por letra ao entrar no viewport
+05  —  FUNCIONALIDADES — GRID DE FEATURES
+▶  FUNCIONALIDADES
+Tudo que você
+sempre precisou.
+Uma plataforma completa de inteligência de conversão, sem curva de aprendizado.
+GRID DE 6 FEATURES (3 colunas x 2 linhas):
+⚡  Script leve e universal
+Um snippet JavaScript com menos de 5KB que cabe em qualquer site. Assíncrono, sem dependências e com impacto zero na performance da sua página.
+    → < 5KB de tamanho inicial
+    → Carregamento async/defer
+    → Vanilla JS — sem frameworks
+    → Compatível com todos os navegadores modernos
+🧠  Enriquecimento por IP
+Identifica cidade, estado, operadora e tipo de conexão automaticamente, sem o visitante preencher nada. Sabe se é residencial, empresarial, mobile ou VPN.
+    → Geolocalização: país, estado, cidade
+    → ISP e tipo de conexão
+    → Detecção de VPN/proxy
+    → Associado ao perfil do visitante em tempo real
+🎯  Popups com gatilhos inteligentes
+Exit Intent, scroll, tempo de permanência e inatividade. Configure regras de URL, dispositivo e UTM. Cada gatilho dispara no momento psicologicamente certo.
+    → Exit Intent (desktop + mobile)
+    → Scroll depth percentual
+    → Tempo na página configurável
+    → Inatividade / idle detection
+📊  Dashboard em tempo real
+Leads capturados, UTM sources, dispositivos, CTR dos popups e feed de atividade recente — sem precisar sair da plataforma ou cruzar com analytics externo.
+    → Filtros de 7d, 30d, 90d
+    → Gráfico de leads por dia
+    → Top UTM sources e dispositivos
+    → Feed de atividade ao vivo
+🔗  Ações de conversão completas
+Redirecione para WhatsApp com mensagem pré-preenchida, URLs customizadas com UTM builder integrado, ou dispare webhooks para o seu CRM favorito.
+    → Abrir WhatsApp (número + mensagem)
+    → Redirect com UTM builder
+    → Webhook para CRM externo
+    → Mensagem de sucesso customizável
+🛡️  Conformidade LGPD nativa
+Banner de consentimento configurável, modos de anonimização de IP, controle de retenção de dados e opt-out por visitante. Tudo dentro da plataforma, sem plugins extras.
+    → Banner de consentimento integrado
+    → Anonimização de IP opcional
+    → Retenção de dados configurável
+    → Opt-out por visitante (cookie)
+⚙  Especificações Visuais — Grid de Features
+  •  Grid: 3 colunas × 2 linhas (desktop) / 1 coluna (mobile)
+  •  Separados por gap de 1px com background rgba(255,255,255,0.07) (efeito de borda entre cards)
+  •  Cada card: background #080B10, padding 40px 36px
+  •  Ícone: 1.6rem, color #6B7A8F por padrão
+  •  Título: Syne 700, 1.05rem, letter-spacing -0.02em
+  •  Descrição: DM Mono, 0.78rem, line-height 1.75, color #6B7A8F
+  •  Lista de specs dentro do card: cor #4B5563, tamanho 0.75rem, prefixo &apos;→&apos;
+  •  Borda externa do grid: 1px solid rgba(255,255,255,0.07)
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Cada card: reveal com fadeUp escalonado (delay 0ms, 80ms, 160ms... por card)
+  ↳  Hover no card: background muda de #080B10 para #141922 (transition 0.3s)
+  ↳  Hover no ícone: color muda de #6B7A8F para #00C47A + scale(1.1) (transition 0.3s)
+  ↳  Linha de borda do card superior: ::before com height 2px, background gradient verde→azul, scaleX 0 → 1 no hover
+06  —  PARA QUEM É — 3 PERSONAS
+▶  PARA QUEM É
+Feito para quem
+vive de resultado.
+🚀
+INFOPRODUTOR
+Rodrigo
+Gasta R$15k/mês em tráfego e não sabe quais UTMs geram leads quentes.
+Agora sabe exatamente de onde vêm os leads que compram — e recupera quem saiu sem converter com popup de saída personalizado.
+📈
+GESTORA DE TRÁFEGO
+Camila
+Gerencia 12 clientes ao mesmo tempo e precisa de dados claros para otimizar.
+Agora tem relatórios de comportamento prontos para apresentar aos clientes e tomar decisões de campanha com dados reais.
+🛒
+DONO DE E-COMMERCE
+Marcos
+3.000 visitas por dia e alta taxa de abandono de carrinho sem conseguir reagir.
+Agora intercepta o visitante antes de sair com uma oferta personalizada — e captura o contato mesmo quando não finaliza a compra.
+⚙  Especificações Visuais — Personas
+  •  3 colunas iguais, gap 24px
+  •  Background card: #080B10 com border 1px rgba(255,255,255,0.07)
+  •  Ícone: 1.4rem, padding em div 48x48px com background #141922
+  •  Role (ex: INFOPRODUTOR): DM Mono, 0.65rem, uppercase, letter-spacing 0.12em, color #00C47A
+  •  Nome: Syne 700, 1.1rem
+  •  Texto de dor: DM Mono, 0.78rem, line-height 1.7, color #6B7A8F
+  •  Linha divisória sutil entre dor e solução
+  •  Texto de solução: DM Mono, 0.78rem, color #E8EDF5 (mais brilhante para contrastar com dor)
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Cada card: reveal com fadeUp, delay escalonado (0ms, 120ms, 240ms)
+  ↳  Hover no card: border-color muda para rgba(0,196,122,0.3) (transition 0.3s)
+  ↳  Hover no ícone: leve rotação (rotate 5deg) + scale(1.05)
+  ↳  Texto de solução: aparece em bold contrast para chamar atenção vs. o texto de dor
+07  —  PROVA SOCIAL — DEPOIMENTOS
+▶  O QUE DIZEM NOSSOS CLIENTES
+Resultados que
+falam por si.
+DEPOIMENTOS (3 cards em carrossel/grid):
+★★★★★
+&quot;Em 3 dias com o MajorLeads eu já sabia quais campanhas do Meta traziam leads que compravam vs. leads que só curiosos. Economizei R$8k no mês seguinte cortando o que não funcionava.&quot;
+Rodrigo M.
+Infoprodutor — Curso de Finanças
+★★★★★
+&quot;Finalmente consigo mostrar para meu cliente não só quantas visitas vieram, mas o que cada visitante fez na página. O dashboard é exatamente o que eu precisava para justificar minhas otimizações.&quot;
+Camila S.
+Gestora de Tráfego — 12 clientes
+★★★★★
+&quot;O popup de exit intent recupera em média 4% dos visitantes que iam embora. Com 3.000 visitas por dia, isso é 120 leads extras por dia que eu não tinha antes. Setup levou 20 minutos.&quot;
+Marcos T.
+E-commerce — Shopify 3k visitas/dia
+⚙  Especificações Visuais — Depoimentos
+  •  Grid: 3 colunas no desktop / carrossel com scroll snap no mobile
+  •  Card: background #0D1117, border 1px rgba(255,255,255,0.07), padding 36px
+  •  Estrelas: cor #FBBF24 (amarelo), font-size 1rem
+  •  Quote: DM Mono, 0.82rem, italic, line-height 1.7, color #CBD5E1, com aspas tipográficas
+  •  Nome: Syne 600, 0.9rem, color #E8EDF5
+  •  Cargo: DM Mono, 0.75rem, color #6B7A8F
+  •  Gap entre quote e nome: linha divisória ou espaçamento generoso
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Cards: reveal com fadeUp escalonado ao entrar no viewport
+  ↳  Hover no card: sutil glow verde nas bordas (box-shadow: 0 0 0 1px rgba(0,196,122,0.2))
+  ↳  Mobile carrossel: scroll snap obrigatório, indicadores de paginação (dots) em verde
+  ↳  Aspas de abertura: pseudo-elemento ::before com &apos; &quot; &apos; grande em cor rgba(0,196,122,0.15), posição absoluta no canto
+08  —  PREÇOS — 3 PLANOS
+▶  PLANOS
+Simples. Sem surpresas.
+14 dias grátis em todos os planos. Sem cartão de crédito.
+STARTER
+R$ 97
+/mês
+→  1 site conectado
+→  Até 20.000 pageviews/mês
+→  3 popups ativos
+→  Dashboard básico
+→  Suporte por e-mail
+[ Começar grátis ]
+✦ MAIS POPULAR
+PRO
+R$ 297
+/mês
+→  5 sites conectados
+→  Até 100.000 pageviews/mês
+→  10 popups ativos
+→  Enriquecimento por IP
+→  Webhooks e integrações
+→  Relatórios avançados
+→  Suporte prioritário
+[ COMEÇAR GRÁTIS → ]
+AGÊNCIA
+R$ 697
+/mês
+→  Sites ilimitados
+→  500.000 pageviews/mês
+→  Popups ilimitados
+→  Multi-tenant por cliente
+→  White-label disponível
+→  API pública completa
+→  Suporte dedicado
+[ Começar grátis ]
+🔒  Pagamento seguro  |  Cancele quando quiser  |  14 dias grátis sem cartão
+⚙  Especificações Visuais — Preços
+  •  Grid: 3 colunas, separados por 1px, background rgba(255,255,255,0.07)
+  •  Plano Pro (featured): background #0D1117, border 1px solid #00C47A em todas as bordas
+  •  Badge &apos;MAIS POPULAR&apos;: posição absolute top: 0, transform translateY(-50%), centralizado, background #00C47A, texto preto Syne 700 0.6rem, padding 4px 14px
+  •  Nome do plano: DM Mono, 0.7rem, uppercase, letter-spacing 0.12em, color #6B7A8F
+  •  Preço: Syne 800, 3rem, letter-spacing -0.04em, line-height 1
+  •  Período: DM Mono, 0.8rem, color #6B7A8F
+  •  Features: DM Mono, 0.78rem, prefixo &apos;→&apos; em verde #00C47A, color #CBD5E1
+  •  Botão Starter/Agency: border 1px rgba(255,255,255,0.07), text cor #E8EDF5, hover: border verde + text verde
+  •  Botão Pro: background #00C47A, text #080B10, hover: opacity 0.85
+  •  Rodapé: ícone cadeado + texto garantias, centralizado, color #6B7A8F
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Toda a seção: reveal com fadeUp
+  ↳  Cards de preço: reveal escalonado (0ms, 150ms, 300ms)
+  ↳  Plano Pro: leve box-shadow verde pulsante (animation glow 3s infinite) para chamar atenção
+  ↳  Hover nos botões ghost: border e color transitam para verde em 0.2s
+  ↳  Contador de features: ao entrar no viewport, features aparecem uma a uma com delay de 50ms cada
+  ↳  Toggle mensal/anual (opcional futuramente): botão switch que muda os preços com crossfade
+09  —  FAQ — PERGUNTAS FREQUENTES
+▶  FAQ
+Dúvidas? A gente resolve.
+Q:  Funciona com qualquer site?
+Sim. O MajorLeads é um script JavaScript puro que funciona em qualquer plataforma que aceite código customizado: WordPress, Shopify, Hotmart, Kiwify, Webflow, Wix, HTML puro, Next.js, React, Vue e qualquer outra. Se você consegue colar um código no <head>, já funciona.
+Q:  Preciso saber programar para usar?
+Não. A instalação é copiar e colar uma linha de código. A criação de popups é 100% visual com editor drag-and-drop. Você não precisa tocar em código nenhum depois da instalação inicial.
+Q:  O script afeta a velocidade do meu site?
+Não. O script é assíncrono (carrega sem bloquear a página) e tem menos de 5KB. Em auditorias do PageSpeed, o impacto é menor que 2 pontos — praticamente imperceptível.
+Q:  Meus dados ficam seguros? E a LGPD?
+Seus dados e os dos seus visitantes ficam armazenados em servidores no Brasil. O MajorLeads tem banner de consentimento integrado, modo de anonimização de IP e opt-out por visitante, tudo em conformidade com a LGPD.
+Q:  Posso usar em vários sites?
+Depende do plano. O Starter suporta 1 site, o Pro suporta 5 e o plano Agência suporta sites ilimitados com gestão multi-tenant por cliente.
+Q:  Como funciona o período de testes?
+Você cria sua conta e tem 14 dias completos com todas as funcionalidades do plano escolhido, sem inserir cartão de crédito. Se não gostar, não paga nada.
+⚙  Especificações Visuais — FAQ
+  •  Layout: accordion (clique para expandir/colapsar resposta)
+  •  Cada item: padding 24px 0, border-bottom 1px rgba(255,255,255,0.07)
+  •  Pergunta: Syne 600, 1rem, color #E8EDF5
+  •  Ícone &apos;+&apos; à direita: transforma em &apos;−&apos; quando aberto, rotation 45deg transition
+  •  Resposta: DM Mono, 0.82rem, line-height 1.7, color #6B7A8F
+  •  Resposta: height 0 → auto com overflow hidden (transition max-height 0.4s ease)
+  •  Hover na pergunta fechada: color muda para #00C47A
+  •  Item aberto: pergunta fica com color #00C47A
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Accordion: expand/collapse com transition max-height 0.35s ease-in-out
+  ↳  Ícone: rotate(45deg) ao abrir, transition 0.25s
+  ↳  Apenas um item aberto por vez (close others)
+  ↳  Reveal da seção: fadeUp ao entrar no viewport
+  ↳  Hover na pergunta: underline sutil ou cor verde
+10  —  CTA FINAL — FECHAMENTO DA PÁGINA
+▶  PRONTO PARA COMEÇAR?
+Seu próximo lead
+já está no seu site.
+Só falta você ver.
+Instale o script, configure um popup e comece a capturar leads com inteligência — em menos de 5 minutos.
+[ Criar conta gratuita → ]
+⚙  Especificações Visuais — CTA Final
+  •  Background da seção: #0D1117
+  •  Border-top: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 120px 60px
+  •  Radial gradient verde sutil no centro: radial-gradient(circle, rgba(0,229,160,0.06) 0%, transparent 70%)
+  •  Headline: Syne 800, clamp(2.5rem, 5vw, 4.5rem), letter-spacing -0.04em, line-height 1
+  •  &apos;Só falta você ver.&apos; em Instrument Serif Italic, cor #00C47A
+  •  Subtítulo: DM Mono, 0.88rem, color #6B7A8F, max-width 440px, centralizado
+  •  Botão: mesmo estilo do hero (background #00C47A, text #080B10, Syne 700, padding 18px 44px)
+✦  ANIMAÇÕES & EFEITOS
+  ↳  Headline: reveal com fadeUp, cada linha com delay crescente
+  ↳  Botão: hover com glow verde pulsante (box-shadow 0 0 60px rgba(0,229,160,0.2))
+  ↳  Gradiente de fundo: muito sutil parallax ao mover mouse
+  ↳  Partículas opcionais: 4-6 partículas verdes flutuando lentamente no fundo
+11  —  FOOTER
+Lado Esquerdo
+MajorLeads
+→ &apos;Major&apos; em branco, &apos;Leads&apos; em verde
+Plataforma de Inteligência de Visitantes
+Lado Direito
+© 2026 MajorLeads. Todos os direitos reservados.
+Política de Privacidade  |  Termos de Uso  |  LGPD
+⚙  Especificações Visuais — Footer
+  •  Background: #080B10
+  •  Border-top: 1px solid rgba(255,255,255,0.07)
+  •  Padding: 40px 60px
+  •  Layout: flex, justify-content: space-between, align-items: center
+  •  Logo: Syne 800, 1rem
+  •  Texto: DM Mono, 0.7rem, color #6B7A8F
+  •  Links de política: hover com color #E8EDF5, transition 0.2s
+  •  Mobile: flex-direction column, gap 16px, text-align center
+A  —  APÊNDICE — SISTEMA DE DESIGN
+Paleta de Cores
+Nome
+Hex
+Uso
+Background principal
+#080B10
+Fundo de toda a página e seções escuras
+Surface 1
+#0D1117
+Stats bar, how it works, pricing, CTA final
+Surface 2
+#141922
+Cards elevados, code card, ticker
+Accent Verde
+#00C47A
+CTAs, destaques, ícones hover, borders featured
+Accent Azul
+#0077FF
+Gradient secundário no code card border
+Text principal
+#E8EDF5
+Headings e texto de ênfase
+Text muted
+#6B7A8F
+Parágrafos, legendas, labels
+Border
+rgba(255,255,255,0.07)
+Bordas sutis entre seções e cards
+Amarelo estrelas
+#FBBF24
+Estrelas de avaliação nos depoimentos
+Sistema Tipográfico
+Família
+Peso
+Uso
+Características
+Syne
+700–800
+Headlines, nav, botões, planos, números
+Letter-spacing negativo, display forte
+Instrument Serif
+400 Italic
+Palavras de ênfase em headlines
+Serif elegante em contraste com o display
+DM Mono
+300–500
+Corpo de texto, labels, código, badges
+Monoespacial refinado, legível em tamanhos pequenos
+Courier New
+400
+Snippets de código (fallback)
+Apenas dentro dos code cards
+Animações — Padrões Globais
+fadeUp
+opacity: 0, translateY(24px) → opacity: 1, translateY(0)
+Reveal de seções e elementos ao entrar no viewport via IntersectionObserver
+pulse
+scale(1), opacity: 1 → scale(0.7), opacity: 0.4 → loop
+Bolinha pulsante no badge do hero
+ticker
+translateX(0) → translateX(-50%)
+Loop infinito do ticker de plataformas, 18s linear
+glow
+box-shadow suave → box-shadow amplo verde
+Plano Pro em destaque, botão CTA hover
+blink
+opacity 1 → 0 → 1
+Cursor piscante no snippet de código
+counter
+0 → valor final (1.5s, ease-out)
+Números na stats bar ao entrar no viewport
+MajorLeads — Copy da Página de Vendas v1.0
+Documento confidencial — Uso interno — Fevereiro 2026
