@@ -127,17 +127,19 @@ serve(async (req) => {
             })
         }
 
-        const { events, token } = payload
+        const { events } = payload
 
-        if (!token) {
-            return new Response(JSON.stringify({ error: 'Missing token' }), {
+        if (!Array.isArray(events) || events.length === 0) {
+            return new Response(JSON.stringify({ error: 'No events in payload' }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,
             })
         }
 
-        if (!Array.isArray(events) || events.length === 0) {
-            return new Response(JSON.stringify({ error: 'No events in payload' }), {
+        // Token: try payload root first, then fallback to events[0].token
+        const token = payload.token || events[0]?.token
+        if (!token) {
+            return new Response(JSON.stringify({ error: 'Missing token' }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,
             })
