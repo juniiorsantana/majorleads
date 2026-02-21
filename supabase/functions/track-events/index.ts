@@ -220,6 +220,31 @@ serve(async (req) => {
             throw new Error(`Database error: ${insertError.message || JSON.stringify(insertError)}`)
         }
 
+        // 4. Webhook Dispatch
+        try {
+            const { data: webhooks } = await supabase
+                .from('webhooks')
+                .select('url, secret, events')
+                .eq('site_id', site.id)
+                .eq('is_active', true)
+
+            if (webhooks && webhooks.length > 0) {
+                for (const row of validRows) {
+                    for (const wh of webhooks) {
+                        const whEvents: string[] = wh.events || [];
+                        if (whEvents.includes(row.event)) {
+                            // Fire and forget to not block the tracking response
+                            supabase.functions.invoke('dispatch-webhook', {
+                                body: { webhookUrl: wh.url, secret: wh.secret, payload: row }
+                            }).catch(err => console.error("Error invoking dispatch-webhook", err));
+                        }
+                    }
+                }
+            }
+        } catch (webhookError) {
+            console.error("Error processing webhooks", webhookError)
+        }
+
         return new Response(JSON.stringify({ success: true, count: validRows.length }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,

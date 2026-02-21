@@ -14,7 +14,7 @@ type Tab = 'perfil' | 'tracker' | 'integracoes' | 'plano' | 'seguranca';
 
 
 const integrations = [
-    { name: 'Webhook Universal', icon: <Webhook size={22} className="text-brand-600" />, bg: 'bg-brand-50', desc: 'Envie eventos em tempo real para qualquer URL via POST JSON.', action: true, route: '/settings/webhook' },
+    { name: 'Webhook Universal', icon: <Webhook size={22} className="text-brand-600" />, bg: 'bg-brand-50', desc: 'Envie eventos em tempo real para qualquer URL via POST JSON.', action: true, route: '/dashboard/settings/webhook' },
     { name: 'ActiveCampaign', logo: 'https://cdn.worldvectorlogo.com/logos/activecampaign-1.svg', desc: 'Sincronize contatos e adicione tags automaticamente.', locked: true },
     { name: 'RD Station', logo: 'https://cdn.worldvectorlogo.com/logos/rd-station.svg', desc: 'Envie conversões como novos leads direto ao RD.', locked: true },
     { name: 'HubSpot CRM', logo: 'https://cdn.worldvectorlogo.com/logos/hubspot-1.svg', desc: 'Crie contatos e negócios automaticamente.', locked: true },

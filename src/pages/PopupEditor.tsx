@@ -144,7 +144,7 @@ const initialTopBarLayers: Layer[] = [
   {
     id: 'tb-layer-1',
     type: 'avatar_image',
-    label: 'Avatar / Ãcone',
+    label: 'Avatar / Ícone',
     icon: ImageIcon,
     props: {
       src: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?w=200&auto=format&fit=crop&q=60',
@@ -170,7 +170,7 @@ const initialTopBarLayers: Layer[] = [
     label: 'Mensagem',
     icon: AlignLeft,
     props: {
-      text: 'Cupom exclusivo de 20% na sua primeira compra â€” sÃ³ hoje!',
+      text: 'Cupom exclusivo de 20% na sua primeira compra — só hoje!',
       fontSize: 12,
       color: '#71717a',
       align: 'left'
@@ -179,7 +179,7 @@ const initialTopBarLayers: Layer[] = [
   {
     id: 'tb-layer-4',
     type: 'button',
-    label: 'BotÃ£o CTA',
+    label: 'Botão CTA',
     icon: MousePointer2,
     props: {
       text: 'Resgatar',
@@ -200,7 +200,7 @@ export const PopupEditor: React.FC = () => {
 
   // --- State Management ---
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(2);
-  const [popupName, setPopupName] = useState("Oferta de SaÃ­da - Mobile");
+  const [popupName, setPopupName] = useState("Oferta de Saída - Mobile");
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [popupType, setPopupType] = useState<PopupType>('modal');
 
@@ -456,11 +456,11 @@ export const PopupEditor: React.FC = () => {
     const newLayer: Layer = (() => {
       switch (type) {
         case 'heading':
-          return { id, type, label: 'TÃ­tulo', icon: Type, props: { text: 'Novo TÃ­tulo', fontSize: 22, fontWeight: 'bold', color: '#18181b', align: 'left' } };
+          return { id, type, label: 'Título', icon: Type, props: { text: 'Novo Título', fontSize: 22, fontWeight: 'bold', color: '#18181b', align: 'left' } };
         case 'text':
-          return { id, type, label: 'ParÃ¡grafo', icon: AlignLeft, props: { text: 'Insira seu texto aqui.', fontSize: 14, color: '#52525b', align: 'left' } };
+          return { id, type, label: 'Parágrafo', icon: AlignLeft, props: { text: 'Insira seu texto aqui.', fontSize: 14, color: '#52525b', align: 'left' } };
         case 'button':
-          return { id, type, label: 'BotÃ£o', icon: MousePointer2, props: { text: 'Clique Aqui', backgroundColor: '#18181b', color: '#FFFFFF', borderRadius: 8 } };
+          return { id, type, label: 'Botão', icon: MousePointer2, props: { text: 'Clique Aqui', backgroundColor: '#18181b', color: '#FFFFFF', borderRadius: 8 } };
         case 'hero_image':
           return { id, type, label: 'Imagem Hero', icon: ImageIcon, props: { src: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=600&auto=format&fit=crop', height: 200, objectFit: 'cover' } };
         case 'input_field':
@@ -672,7 +672,7 @@ export const PopupEditor: React.FC = () => {
                 <Lightbulb size={16} className="text-amber-500 mt-0.5 shrink-0" />
                 <div className="text-xs text-amber-800">
                   <p className="font-medium mb-1">Dica Pro</p>
-                  <p className="leading-relaxed opacity-90">Use variÃ¡veis dinÃ¢micas no texto do botÃ£o, como <code className="bg-amber-100 px-1 rounded text-amber-900">{"{{lead.first_name}}"}</code>.</p>
+                  <p className="leading-relaxed opacity-90">Use variáveis dinâmicas no texto do botão, como <code className="bg-amber-100 px-1 rounded text-amber-900">{"{{lead.first_name}}"}</code>.</p>
                 </div>
               </div>
             </div>
@@ -848,7 +848,7 @@ export const PopupEditor: React.FC = () => {
               />
             </div>
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-zinc-900">Campo obrigatÃ³rio</label>
+              <label className="text-xs font-medium text-zinc-900">Campo obrigatório</label>
               <button
                 onClick={() => handleLayerChange(layer.id, { required: !layer.props.required })}
                 className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${layer.props.required ? 'bg-brand-600' : 'bg-zinc-200'
@@ -917,7 +917,7 @@ export const PopupEditor: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-zinc-50 relative">
+    <div className="h-screen flex flex-col overflow-hidden bg-zinc-50 text-zinc-900 relative">
 
       {/* Toast Notification */}
       {showToast && (
@@ -1075,9 +1075,9 @@ export const PopupEditor: React.FC = () => {
                       <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden">
                         <div className="p-1">
                           {[
-                            { type: 'heading' as LayerType, icon: Type, label: 'TÃ­tulo' },
-                            { type: 'text' as LayerType, icon: AlignLeft, label: 'ParÃ¡grafo' },
-                            { type: 'button' as LayerType, icon: MousePointer2, label: 'BotÃ£o CTA' },
+                            { type: 'heading' as LayerType, icon: Type, label: 'Título' },
+                            { type: 'text' as LayerType, icon: AlignLeft, label: 'Parágrafo' },
+                            { type: 'button' as LayerType, icon: MousePointer2, label: 'Botão CTA' },
                             { type: 'hero_image' as LayerType, icon: ImageIcon, label: 'Imagem' },
                             { type: 'input_field' as LayerType, icon: User, label: 'Campo: Nome' },
                             { type: 'input_field' as LayerType, icon: Mail, label: 'Campo: E-mail', fieldType: 'email' },
@@ -1494,11 +1494,11 @@ export const PopupEditor: React.FC = () => {
         {/* Right Sidebar - Dynamic Properties */}
         <aside className="w-[320px] bg-white border-l border-zinc-200 flex flex-col shrink-0 z-10 overflow-y-auto transition-all duration-300">
 
-          {/* ETAPA 1: GATILHOS E CONDIÃ‡Ã•ES */}
+          {/* ETAPA 1: GATILHOS E CONDIÇÕES */}
           {activeStep === 1 && (
             <>
               <div className="p-4 border-b border-zinc-200 flex items-center justify-between sticky top-0 bg-white z-10">
-                <h2 className="text-sm font-bold text-zinc-900">Gatilhos e CondiÃ§Ãµes</h2>
+                <h2 className="text-sm font-bold text-zinc-900">Gatilhos e Condições</h2>
               </div>
               <div className="p-5 space-y-6">
                 {/* Trigger Type */}
@@ -1557,7 +1557,7 @@ export const PopupEditor: React.FC = () => {
                                   placeholder="50"
                                   className="w-16 px-2 py-1 text-sm border border-zinc-300 rounded focus:ring-2 focus:ring-brand-500 focus:outline-none"
                                 />
-                                <span className="text-xs text-zinc-500">% da pÃ¡gina</span>
+                                <span className="text-xs text-zinc-500">% da página</span>
                               </div>
                             )}
                             {t.type === 'inactivity' && (
