@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,7 +15,10 @@ import {
     MapPin,
     Calendar,
     MousePointerClick,
-    Mail
+    Mail,
+    ArrowDown,
+    X,
+    Filter
 } from 'lucide-react';
 
 interface LeadData {
@@ -57,6 +60,7 @@ export const LeadProfile: React.FC = () => {
     const [events, setEvents] = useState<EventData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showAllEvents, setShowAllEvents] = useState(false);
 
     useEffect(() => {
         const fetchLeadAndEvents = async () => {
@@ -132,6 +136,34 @@ export const LeadProfile: React.FC = () => {
     const formatEventTime = (timestamp: number) => {
         return new Date(timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     };
+
+    // Process events for timeline
+    const processedEvents = useMemo(() => {
+        const consolidated: EventData[] = [];
+        const seenTimeOnPage = new Set<string>();
+        const seenScrollDepth = new Set<string>();
+
+        // We assume events are already sorted by timestamp DESC
+        for (const event of events) {
+            const key = `${event.session_id}_${event.path}`;
+            if (event.event === 'time_on_page') {
+                if (!seenTimeOnPage.has(key)) {
+                    seenTimeOnPage.add(key);
+                    consolidated.push(event); // keep max
+                }
+            } else if (event.event === 'scroll_depth') {
+                if (!seenScrollDepth.has(key)) {
+                    seenScrollDepth.add(key);
+                    consolidated.push(event); // keep max
+                }
+            } else {
+                consolidated.push(event);
+            }
+        }
+
+        const technicalEvents = ['tab_hidden', 'tab_visible', 'idle'];
+        return consolidated.filter(e => showAllEvents || !technicalEvents.includes(e.event));
+    }, [events, showAllEvents]);
 
     if (loading) {
         return (
@@ -247,48 +279,116 @@ export const LeadProfile: React.FC = () => {
                         <div className="lg:col-span-8 bg-white rounded-xl border border-zinc-200 shadow-sm flex flex-col">
                             <div className="p-6 border-b border-zinc-200 flex items-center justify-between">
                                 <h2 className="text-lg font-semibold text-zinc-900">Timeline de Eventos</h2>
+                                <label className="flex items-center gap-2 text-sm text-zinc-600 cursor-pointer hover:text-zinc-900 transition-colors">
+                                    <div className="relative inline-block w-8 h-4 rounded-full transition-colors ease-in-out duration-200 bg-zinc-200">
+                                        <input
+                                            type="checkbox"
+                                            className="opacity-0 w-0 h-0"
+                                            checked={showAllEvents}
+                                            onChange={(e) => setShowAllEvents(e.target.checked)}
+                                        />
+                                        <span className={`absolute left-0.5 top-0.5 bg-white w-3 h-3 rounded-full transition-transform duration-200 ease-in-out ${showAllEvents ? 'transform translate-x-4 bg-brand-500' : ''} shadow-sm border border-zinc-300`}></span>
+                                    </div>
+                                    Mostrar todos os eventos
+                                </label>
                             </div>
                             <div className="p-6">
-                                {events.length === 0 ? (
-                                    <div className="text-center py-8 text-zinc-500">
-                                        Nenhum evento registrado.
+                                {processedEvents.length === 0 ? (
+                                    <div className="text-center py-8 text-zinc-500 flex flex-col items-center justify-center gap-2">
+                                        <Filter size={24} className="text-zinc-300" />
+                                        Nenhum evento para exibir.
                                     </div>
                                 ) : (
                                     <div className="relative space-y-8 pl-3">
                                         <div className="absolute top-2 bottom-0 left-[11px] w-0.5 bg-zinc-200"></div>
-                                        {events.map((event, idx) => {
+                                        {processedEvents.map((event, idx) => {
 
                                             let icon = <MousePointerClick className="w-full h-full p-0.5 text-white" />;
                                             let bgColor = "bg-zinc-400";
                                             let title = event.event;
                                             let description = event.path || event.url || '';
 
-                                            if (event.event === 'page_view') {
-                                                icon = <Eye className="w-full h-full p-0.5 text-white" />;
-                                                bgColor = "bg-blue-500";
-                                                title = "Página Vista";
-                                            } else if (event.event === 'form_submit') {
-                                                icon = <Flag className="w-full h-full p-0.5 text-white" />;
-                                                bgColor = "bg-green-500";
-                                                title = "Formulário Enviado";
-                                            } else if (event.event === 'popup_clicked') {
-                                                icon = <MousePointerClick className="w-full h-full p-0.5 text-white" />;
-                                                bgColor = "bg-brand-500";
-                                                title = "Popup Clicado";
-                                            } else if (event.event === 'time_on_page') {
-                                                icon = <Clock className="w-full h-full p-0.5 text-white" />;
-                                                bgColor = "bg-purple-500";
-                                                title = "Tempo na Página";
-                                                description = `${event.properties?.timeSpent || 0} segundos em ${event.path}`;
+                                            const formatTimeSpent = (seconds: number) => {
+                                                if (!seconds) return '0s';
+                                                if (seconds < 60) return `${Math.floor(seconds)}s`;
+                                                const m = Math.floor(seconds / 60);
+                                                const s = Math.floor(seconds % 60);
+                                                return `${m}min ${s}s`;
+                                            };
+
+                                            switch (event.event) {
+                                                case 'tab_hidden':
+                                                    title = 'Saiu da aba';
+                                                    icon = <Clock className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-300";
+                                                    break;
+                                                case 'tab_visible':
+                                                    title = 'Voltou para a aba';
+                                                    icon = <Eye className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-300";
+                                                    break;
+                                                case 'idle':
+                                                    title = 'Ficou inativo';
+                                                    icon = <Clock className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-300";
+                                                    break;
+                                                case 'scroll_depth':
+                                                    title = `Rolou até ${event.properties?.depth || 0}% da página`;
+                                                    icon = <ArrowDown className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-400";
+                                                    break;
+                                                case 'time_on_page':
+                                                    title = `${formatTimeSpent(event.properties?.timeSpent || 0)} na página`;
+                                                    icon = <Clock className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-purple-500";
+                                                    break;
+                                                case 'lead_identified':
+                                                    title = 'Preencheu formulário';
+                                                    icon = <Flag className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-green-500";
+                                                    break;
+                                                case 'form_submit':
+                                                    title = 'Enviou formulário';
+                                                    icon = <Flag className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-green-500";
+                                                    break;
+                                                case 'popup_shown':
+                                                    title = `Viu o popup: ${event.properties?.popup_name || 'Desconhecido'}`;
+                                                    icon = <Eye className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-brand-400";
+                                                    break;
+                                                case 'popup_cta_click':
+                                                case 'popup_clicked':
+                                                    title = 'Clicou no botão do popup';
+                                                    icon = <MousePointerClick className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-brand-600";
+                                                    break;
+                                                case 'popup_closed':
+                                                    title = 'Fechou o popup';
+                                                    icon = <X className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-400";
+                                                    break;
+                                                case 'page_view':
+                                                    title = 'Visitou a página';
+                                                    icon = <Eye className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-blue-500";
+                                                    break;
+                                                case 'click':
+                                                    title = `Clicou em: ${event.properties?.text || 'Elemento'}`;
+                                                    icon = <MousePointerClick className="w-full h-full p-0.5 text-white" />;
+                                                    bgColor = "bg-zinc-500";
+                                                    break;
+                                                default:
+                                                    title = event.event;
                                             }
 
                                             // Show date separator if day changes
                                             const eventDate = new Date(event.timestamp).toLocaleDateString();
-                                            const prevDate = idx < events.length - 1 ? new Date(events[idx + 1].timestamp).toLocaleDateString() : null;
-                                            const isDateChange = idx === events.length - 1 || eventDate !== prevDate;
+                                            const prevDate = idx < processedEvents.length - 1 ? new Date(processedEvents[idx + 1].timestamp).toLocaleDateString() : null;
+                                            const isDateChange = idx === processedEvents.length - 1 || eventDate !== prevDate;
 
                                             // Handle properties formatting
-                                            const propKeys = Object.keys(event.properties || {}).filter(k => k !== 'timeSpent');
+                                            const propKeys = Object.keys(event.properties || {}).filter(k => !['timeSpent', 'depth', 'popup_name', 'text'].includes(k));
 
                                             return (
                                                 <div key={event.id} className="relative">
