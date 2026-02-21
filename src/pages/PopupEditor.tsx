@@ -216,6 +216,13 @@ export const PopupEditor: React.FC = () => {
   const [isPublished, setIsPublished] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
 
+  useEffect(() => {
+    if (showPublishModal) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [showPublishModal]);
+
   // Drag & Drop State
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
 
@@ -629,7 +636,14 @@ export const PopupEditor: React.FC = () => {
                 <div>
                   <label className="text-xs font-medium text-zinc-900 mb-1 block">Cor de Fundo</label>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm" style={{ backgroundColor: layer.props.backgroundColor }}></div>
+                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm relative overflow-hidden shrink-0" style={{ backgroundColor: layer.props.backgroundColor }}>
+                      <input
+                        type="color"
+                        value={layer.props.backgroundColor}
+                        onChange={(e) => handleLayerChange(layer.id, { backgroundColor: e.target.value })}
+                        className="absolute inset-[-10px] w-16 h-16 opacity-0 cursor-pointer"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={layer.props.backgroundColor}
@@ -641,7 +655,14 @@ export const PopupEditor: React.FC = () => {
                 <div>
                   <label className="text-xs font-medium text-zinc-900 mb-1 block">Cor do Texto</label>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm" style={{ backgroundColor: layer.props.color }}></div>
+                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm relative overflow-hidden shrink-0" style={{ backgroundColor: layer.props.color }}>
+                      <input
+                        type="color"
+                        value={layer.props.color}
+                        onChange={(e) => handleLayerChange(layer.id, { color: e.target.value })}
+                        className="absolute inset-[-10px] w-16 h-16 opacity-0 cursor-pointer"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={layer.props.color}
@@ -744,7 +765,14 @@ export const PopupEditor: React.FC = () => {
                 <div>
                   <label className="text-xs font-medium text-zinc-900 mb-1 block">Cor</label>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm" style={{ backgroundColor: layer.props.color }}></div>
+                    <div className="w-8 h-8 rounded border border-zinc-200 shadow-sm relative overflow-hidden shrink-0" style={{ backgroundColor: layer.props.color }}>
+                      <input
+                        type="color"
+                        value={layer.props.color}
+                        onChange={(e) => handleLayerChange(layer.id, { color: e.target.value })}
+                        className="absolute inset-[-10px] w-16 h-16 opacity-0 cursor-pointer"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={layer.props.color}
@@ -930,7 +958,7 @@ export const PopupEditor: React.FC = () => {
       {/* Publish Modal */}
       {showPublishModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-bold text-zinc-900 mb-2">Publicar popup?</h3>
             <p className="text-zinc-500 text-sm mb-6">O popup "{popupName}" ficará ativo imediatamente no seu site.</p>
             <div className="flex gap-3">

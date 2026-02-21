@@ -88,6 +88,13 @@ export const Popups: React.FC = () => {
   const [showToast, setShowToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   React.useEffect(() => {
+    if (deleteModal) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [deleteModal]);
+
+  React.useEffect(() => {
     const fetchPopups = async () => {
       if (!user) return;
       setIsLoading(true);
@@ -475,7 +482,6 @@ export const Popups: React.FC = () => {
       {deleteModal && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => !isDeleting && setDeleteModal(null)}
         >
           <div
             className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4 animate-in zoom-in-95 duration-200"

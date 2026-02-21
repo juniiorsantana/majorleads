@@ -16,7 +16,8 @@ import {
   Copy,
   Check,
   Loader2,
-  Plus
+  Plus,
+  Shield
 } from 'lucide-react';
 
 interface WebhookData {
@@ -54,6 +55,13 @@ export const WebhookSettings: React.FC = () => {
   const [testStatus, setTestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [showDisconnectModal, setShowDisconnectModal] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (showDisconnectModal) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [showDisconnectModal]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -557,8 +565,8 @@ export const WebhookSettings: React.FC = () => {
                       onClick={handleTest}
                       disabled={!url || testStatus === 'loading'}
                       className={`w-full py-2.5 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all ${!url
-                          ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
-                          : 'bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm'
+                        ? 'bg-zinc-100 text-zinc-400 cursor-not-allowed'
+                        : 'bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 shadow-sm'
                         }`}
                     >
                       {testStatus === 'loading' ? (

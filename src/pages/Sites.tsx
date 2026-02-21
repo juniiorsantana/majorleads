@@ -32,6 +32,11 @@ function DeleteSiteModal({
 }) {
     const [deleting, setDeleting] = useState(false);
 
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, []);
+
     const handleDelete = async () => {
         setDeleting(true);
         try {
@@ -49,7 +54,7 @@ function DeleteSiteModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[scaleIn_0.2s_ease]"
                 onClick={e => e.stopPropagation()}
@@ -109,6 +114,11 @@ function EditSiteModal({
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
 
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = ''; };
+    }, []);
+
     const handleSave = async () => {
         const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
         if (!name.trim() || !cleanDomain.trim()) {
@@ -153,7 +163,7 @@ function EditSiteModal({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div
                 className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[scaleIn_0.2s_ease]"
                 onClick={e => e.stopPropagation()}
