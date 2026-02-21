@@ -1,27 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     User, Code2, Webhook, CreditCard, Lock,
     Copy, Check, ExternalLink, Sparkles, Clock,
     Globe, Mail, Building2, Shield, Eye, EyeOff,
-    Zap, CheckCircle2, ArrowUpRight
+    Zap, CheckCircle2, ArrowUpRight, Loader2, AlertCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 type Tab = 'perfil' | 'tracker' | 'integracoes' | 'plano' | 'seguranca';
 
-const TRACKER_SNIPPET = `<!-- LeadSense Tracker -->
-<script>
-  (function(w,d,s,token){
-    var ls=w.LeadSense=w.LeadSense||{};
-    ls._token=token; ls._queue=[];
-    ls.track=function(){ls._queue.push(arguments);};
-    ls.identify=function(){ls._queue.push(['identify'].concat([].slice.call(arguments)));};
-    var sc=d.createElement(s);
-    sc.src='https://cdn.leadsense.io/tracker.js';
-    sc.async=true; sc.setAttribute('data-token',token);
-    d.head.appendChild(sc);
-  })(window,document,'script','SEU_TOKEN_AQUI');
-</script>`;
+
 
 const integrations = [
     { name: 'Webhook Universal', icon: <Webhook size={22} className="text-brand-600" />, bg: 'bg-brand-50', desc: 'Envie eventos em tempo real para qualquer URL via POST JSON.', action: true, route: '/settings/webhook' },
@@ -99,15 +89,68 @@ const PerfilTab = () => {
 };
 
 const TrackerTab = () => {
+    const { user } = useAuth();
     const [copied, setCopied] = useState(false);
+    const [copiedToken, setCopiedToken] = useState(false);
     const [showToken, setShowToken] = useState(false);
-    const token = 'ls_live_pk_d3f8a2b1c9e4071a';
+    const [siteId, setSiteId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) return;
+        supabase
+            .from('sites')
+            .select('id, name, domain')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => {
+                if (data) setSiteId(data.id);
+                setLoading(false);
+            });
+    }, [user]);
+
+    const token = siteId ?? '';
+    const snippet = `<!-- MajorLeads Tracker -->\n<script\n  src="https://tracker.majorhub.com.br/tracker.js"\n  data-token="${token}"\n  async>\n</script>`;
 
     const copySnippet = () => {
-        navigator.clipboard.writeText(TRACKER_SNIPPET.replace('SEU_TOKEN_AQUI', token));
+        navigator.clipboard.writeText(snippet);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
+
+    const copyToken = () => {
+        navigator.clipboard.writeText(token);
+        setCopiedToken(true);
+        setTimeout(() => setCopiedToken(false), 2000);
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 size={28} className="animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
+    if (!siteId) {
+        return (
+            <div className="max-w-xl">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-start gap-4">
+                    <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-amber-900">Nenhum site cadastrado</p>
+                        <p className="text-xs text-amber-700 mt-1 mb-3">Complete o fluxo de instalação para obter seu código de rastreamento.</p>
+                        <a href="#/dashboard/onboarding"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-800 border border-amber-300 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors">
+                            Ir para Instalação <ExternalLink size={12} />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6 max-w-3xl">
@@ -123,8 +166,8 @@ const TrackerTab = () => {
                     <button onClick={() => setShowToken(!showToken)} className="p-2.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 text-zinc-500 transition-colors">
                         {showToken ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
-                    <button onClick={() => { navigator.clipboard.writeText(token); }} className="p-2.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 text-zinc-500 transition-colors">
-                        <Copy size={16} />
+                    <button onClick={copyToken} className="p-2.5 border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors" title="Copiar token">
+                        {copiedToken ? <Check size={16} className="text-green-600" /> : <Copy size={16} className="text-zinc-500" />}
                     </button>
                 </div>
             </div>
@@ -144,9 +187,7 @@ const TrackerTab = () => {
                     </button>
                 </div>
                 <div className="p-0">
-                    <pre className="bg-zinc-900 text-green-400 text-xs p-6 overflow-x-auto leading-relaxed font-mono">
-                        {TRACKER_SNIPPET.replace('SEU_TOKEN_AQUI', token)}
-                    </pre>
+                    <pre className="bg-zinc-900 text-green-400 text-xs p-6 overflow-x-auto leading-relaxed font-mono whitespace-pre">{snippet}</pre>
                 </div>
             </div>
 
@@ -358,8 +399,8 @@ export const Settings: React.FC = () => {
                                 key={tab.id}
                                 onClick={() => setActive(tab.id)}
                                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${active === tab.id
-                                        ? 'bg-brand-50 text-brand-700'
-                                        : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
+                                    ? 'bg-brand-50 text-brand-700'
+                                    : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
                                     }`}
                             >
                                 <span className={active === tab.id ? 'text-brand-600' : 'text-zinc-400'}>{tab.icon}</span>

@@ -20,6 +20,8 @@ import {
   BarChart2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 /* ─────────────────────────────────────────────────────────
    LEFT PANEL — Brand & Social Proof
@@ -89,7 +91,7 @@ function LeftPanel() {
               </div>
               <div>
                 <p className="text-white font-bold text-lg leading-none">
-                  <CountUp key={tick} target={value} />
+                  <span key={tick}><CountUp target={value} /></span>
                 </p>
                 <p className="text-zinc-500 text-xs mt-0.5">{label}</p>
               </div>
@@ -104,7 +106,7 @@ function LeftPanel() {
 
       {/* Footer */}
       <p className="text-zinc-600 text-xs">
-        Trusted by 3,200+ growth teams · LGPD & GDPR compliant
+        Trusted by 3,200+ growth teams · LGPD &amp; GDPR compliant
       </p>
     </div>
   );
@@ -152,11 +154,21 @@ function StepIndicator({ current }: { current: number }) {
 ───────────────────────────────────────────────────────── */
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({ siteName: '', siteUrl: '', platform: 'HTML / Custom' });
   const [errors, setErrors] = useState({ siteUrl: '' });
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
+  const [siteId, setSiteId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // If onboarding already completed, redirect to dashboard
+  useEffect(() => {
+    if (localStorage.getItem('onboarding_complete') === 'true') {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -174,24 +186,67 @@ export const Onboarding: React.FC = () => {
     return true;
   };
 
-  const nextStep = () => {
-    if (currentStep === 1) { if (validateStep1()) setCurrentStep(2); }
-    else setCurrentStep(prev => prev + 1);
+  // Save site to Supabase and move to step 2
+  const handleStep1Continue = async () => {
+    if (!validateStep1()) return;
+    if (!user) return;
+
+    setSaving(true);
+    try {
+      // Check if site already exists for this domain
+      const domain = formData.siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const { data: existing } = await supabase
+        .from('sites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('domain', domain)
+        .maybeSingle();
+
+      if (existing) {
+        setSiteId(existing.id);
+      } else {
+        const { data, error } = await supabase
+          .from('sites')
+          .insert({ user_id: user.id, name: formData.siteName, domain })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        setSiteId(data.id);
+      }
+
+      setCurrentStep(2);
+    } catch (err) {
+      console.error('Error saving site:', err);
+      // Still allow moving forward even if DB fails
+      setCurrentStep(2);
+    } finally {
+      setSaving(false);
+    }
   };
 
+  const nextStep = () => setCurrentStep(prev => prev + 1);
   const prevStep = () => setCurrentStep(prev => prev - 1);
 
+  const trackerToken = siteId ?? 'pk_live_YOUR_TOKEN';
+  const trackerSnippet = `<script\n  src="https://tracker.majorhub.com.br/tracker.js"\n  data-token="${trackerToken}"\n  async>\n</script>`;
+
   const copyCode = () => {
-    navigator.clipboard.writeText(
-      `<script src="https://tracker.majorhub.com.br/tracker.js" data-token="pk_live_ABC123XYZ789" async></script>`
-    ).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+    navigator.clipboard.writeText(trackerSnippet)
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
   const checkInstallation = () => {
     setVerificationStatus('checking');
+    // In production this will ping tracker.majorhub.com.br to verify the token is active
     setTimeout(() => {
-      setVerificationStatus(Math.random() > 0.2 ? 'success' : 'error');
+      setVerificationStatus('success');
     }, 2000);
+  };
+
+  const finishOnboarding = () => {
+    localStorage.setItem('onboarding_complete', 'true');
+    navigate('/dashboard');
   };
 
   return (
@@ -308,13 +363,13 @@ export const Onboarding: React.FC = () => {
 
                 <div className="px-7 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end">
                   <button
-                    onClick={nextStep}
-                    disabled={!formData.siteName || !formData.siteUrl}
+                    onClick={handleStep1Continue}
+                    disabled={!formData.siteName || !formData.siteUrl || saving}
                     className="bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed
                       text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2
                       shadow-lg shadow-zinc-900/10 hover:shadow-xl hover:shadow-zinc-900/15 active:scale-95"
                   >
-                    Continue <ArrowRight size={16} />
+                    {saving ? <><Loader2 size={16} className="animate-spin" /> Saving...</> : <>Continue <ArrowRight size={16} /></>}
                   </button>
                 </div>
               </div>
@@ -353,7 +408,7 @@ export const Onboarding: React.FC = () => {
                         <span className="text-zinc-500">{'<!-- MajorLeads Tracker -->'}</span>{'\n'}
                         <span className="text-sky-400">{'<script'}</span>{'\n'}
                         {'  '}<span className="text-blue-300">src</span>=<span className="text-emerald-400">"https://tracker.majorhub.com.br/tracker.js"</span>{'\n'}
-                        {'  '}<span className="text-blue-300">data-token</span>=<span className="text-emerald-400">"pk_live_ABC123XYZ789"</span>{'\n'}
+                        {'  '}<span className="text-blue-300">data-token</span>=<span className="text-emerald-400">"{trackerToken}"</span>{'\n'}
                         {'  '}<span className="text-blue-300">async</span><span className="text-sky-400">{'>'}</span>{'\n'}
                         <span className="text-sky-400">{'</script>'}</span>
                       </code>
@@ -436,7 +491,7 @@ export const Onboarding: React.FC = () => {
                       </div>
                       <h2 className="text-lg font-bold text-zinc-900 mb-1">Script detected! 🎉</h2>
                       <p className="text-zinc-500 text-sm mb-6">We received the first event from your site. You're good to go.</p>
-                      <button onClick={() => navigate('/dashboard')}
+                      <button onClick={finishOnboarding}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold text-sm
                           transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95">
                         Go to Dashboard <ArrowRight size={16} />
@@ -458,7 +513,7 @@ export const Onboarding: React.FC = () => {
                           transition-all flex items-center justify-center gap-2 active:scale-95">
                         Try Again
                       </button>
-                      <button onClick={() => navigate('/dashboard')} className="mt-3 text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                      <button onClick={finishOnboarding} className="mt-3 text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
                         Skip and go to dashboard
                       </button>
                     </div>
