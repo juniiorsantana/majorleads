@@ -203,7 +203,9 @@ export const Onboarding: React.FC = () => {
         .maybeSingle();
 
       if (existing) {
-        setSiteId(existing.id);
+        setErrors({ siteUrl: 'Você já tem um site cadastrado com esse domínio.' });
+        setSaving(false);
+        return;
       } else {
         const { data, error } = await supabase
           .from('sites')

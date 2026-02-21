@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Globe, Plus, Copy, Check, ExternalLink, Code2,
     MoreVertical, Trash2, CheckCircle2, Clock, Loader2,
-    Zap, ChevronRight, Lock
+    Zap, ChevronRight, Lock, Pencil, AlertTriangle, X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -15,10 +15,225 @@ interface Site {
     created_at: string;
 }
 
-// For now, until plan management is implemented, allow up to this many sites
 const FREE_PLAN_LIMIT = 1;
 
-function SiteCard({ site }: { site: Site; key?: React.Key }) {
+/* ─────────────────────────────────────────────
+   DELETE CONFIRMATION MODAL
+───────────────────────────────────────────── */
+function DeleteSiteModal({
+    site,
+    onClose,
+    onDeleted,
+}: {
+    site: Site;
+    onClose: () => void;
+    onDeleted: () => void;
+}) {
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            // FK order: events → popups → sites
+            await supabase.from('events').delete().eq('site_id', site.id);
+            await supabase.from('popups').delete().eq('site_id', site.id);
+            const { error } = await supabase.from('sites').delete().eq('id', site.id);
+            if (error) throw error;
+            onDeleted();
+        } catch (err) {
+            console.error('Error deleting site:', err);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[scaleIn_0.2s_ease]"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="px-6 pt-6 pb-4 flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                        <AlertTriangle size={20} className="text-red-500" />
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="text-base font-bold text-zinc-900 mb-1">Excluir site</h3>
+                        <p className="text-sm text-zinc-500">
+                            Tem certeza que deseja excluir <span className="font-semibold text-zinc-700">{site.name}</span> ({site.domain})?
+                        </p>
+                        <p className="text-xs text-red-500 mt-2">
+                            Todos os popups e eventos vinculados serão removidos permanentemente.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        disabled={deleting}
+                        className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-100 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-700 text-white transition-all flex items-center gap-2 shadow-sm disabled:opacity-50"
+                    >
+                        {deleting ? <><Loader2 size={14} className="animate-spin" /> Excluindo...</> : <><Trash2 size={14} /> Confirmar exclusão</>}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────
+   EDIT SITE MODAL
+───────────────────────────────────────────── */
+function EditSiteModal({
+    site,
+    userId,
+    onClose,
+    onUpdated,
+}: {
+    site: Site;
+    userId: string;
+    onClose: () => void;
+    onUpdated: () => void;
+}) {
+    const [name, setName] = useState(site.name);
+    const [domain, setDomain] = useState(site.domain);
+    const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        if (!name.trim() || !cleanDomain.trim()) {
+            setError('Nome e domínio são obrigatórios.');
+            return;
+        }
+
+        setSaving(true);
+        setError('');
+
+        try {
+            // Check if another site already has this domain
+            if (cleanDomain !== site.domain) {
+                const { data: existing } = await supabase
+                    .from('sites')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('domain', cleanDomain)
+                    .neq('id', site.id)
+                    .maybeSingle();
+
+                if (existing) {
+                    setError('Você já tem um site cadastrado com esse domínio.');
+                    setSaving(false);
+                    return;
+                }
+            }
+
+            const { error: updateError } = await supabase
+                .from('sites')
+                .update({ name: name.trim(), domain: cleanDomain })
+                .eq('id', site.id);
+
+            if (updateError) throw updateError;
+            onUpdated();
+        } catch (err) {
+            console.error('Error updating site:', err);
+            setError('Erro ao salvar. Tente novamente.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
+            <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden animate-[scaleIn_0.2s_ease]"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-zinc-100">
+                    <h3 className="text-base font-bold text-zinc-900">Editar site</h3>
+                    <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="px-6 py-5 space-y-4">
+                    <div>
+                        <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                            Nome do site
+                        </label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 text-zinc-900 text-sm
+                                focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent
+                                placeholder:text-zinc-300 transition-all bg-zinc-50"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                            Domínio
+                        </label>
+                        <div className="relative">
+                            <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                            <input
+                                type="text"
+                                value={domain}
+                                onChange={e => { setDomain(e.target.value); setError(''); }}
+                                className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-zinc-900 text-sm
+                                    focus:outline-none focus:ring-2 transition-all placeholder:text-zinc-300 bg-zinc-50
+                                    ${error ? 'border-red-300 focus:ring-red-200' : 'border-zinc-200 focus:ring-zinc-900 focus:border-transparent'}`}
+                            />
+                        </div>
+                        {error && (
+                            <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                                <AlertTriangle size={12} />{error}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-2">
+                    <button
+                        onClick={onClose}
+                        disabled={saving}
+                        className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-600 hover:bg-zinc-100 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving || !name.trim() || !domain.trim()}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-zinc-900 hover:bg-zinc-700 text-white transition-all flex items-center gap-2 shadow-sm disabled:opacity-40"
+                    >
+                        {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : 'Salvar'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────────
+   SITE CARD
+───────────────────────────────────────────── */
+function SiteCard({
+    site,
+    onEdit,
+    onDelete,
+}: {
+    site: Site;
+    onEdit: (s: Site) => void;
+    onDelete: (s: Site) => void;
+}) {
     const [copied, setCopied] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -64,7 +279,13 @@ function SiteCard({ site }: { site: Site; key?: React.Key }) {
                             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                             <div className="absolute right-0 top-8 z-20 bg-white border border-zinc-200 rounded-xl shadow-lg py-1 w-44">
                                 <button
-                                    onClick={() => { setMenuOpen(false); }}
+                                    onClick={() => { setMenuOpen(false); onEdit(site); }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 transition-colors"
+                                >
+                                    <Pencil size={14} /> Editar site
+                                </button>
+                                <button
+                                    onClick={() => { setMenuOpen(false); onDelete(site); }}
                                     className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                 >
                                     <Trash2 size={14} /> Remover site
@@ -77,7 +298,6 @@ function SiteCard({ site }: { site: Site; key?: React.Key }) {
 
             {/* Status + token */}
             <div className="px-6 py-4 space-y-3">
-                {/* Status badge */}
                 <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -88,7 +308,6 @@ function SiteCard({ site }: { site: Site; key?: React.Key }) {
                     </span>
                 </div>
 
-                {/* Token row */}
                 <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2">
                     <code className="text-xs font-mono text-zinc-500 flex-1 truncate">{site.id}</code>
                     <button
@@ -138,36 +357,67 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     );
 }
 
+/* ─────────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────────── */
 export const Sites: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const [sites, setSites] = useState<Site[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deleteTarget, setDeleteTarget] = useState<Site | null>(null);
+    const [editTarget, setEditTarget] = useState<Site | null>(null);
 
-    useEffect(() => {
+    const fetchSites = async () => {
         if (!user) return;
-        supabase
+        const { data } = await supabase
             .from('sites')
             .select('id, name, domain, created_at')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: true })
-            .then(({ data }) => {
-                setSites(data ?? []);
-                setLoading(false);
-            });
+            .order('created_at', { ascending: true });
+        setSites(data ?? []);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchSites();
     }, [user]);
 
     const canAddMore = sites.length < FREE_PLAN_LIMIT;
-    // Once plan management exists, replace FREE_PLAN_LIMIT with actual plan limit
 
     const handleAddSite = () => {
-        // Clear so onboarding doesn't immediately redirect back
         localStorage.removeItem('onboarding_complete');
         navigate('/dashboard/onboarding');
     };
 
     return (
         <>
+            <style>{`
+                @keyframes scaleIn {
+                    from { opacity: 0; transform: scale(0.95); }
+                    to   { opacity: 1; transform: scale(1); }
+                }
+            `}</style>
+
+            {/* Delete modal */}
+            {deleteTarget && (
+                <DeleteSiteModal
+                    site={deleteTarget}
+                    onClose={() => setDeleteTarget(null)}
+                    onDeleted={() => { setDeleteTarget(null); fetchSites(); }}
+                />
+            )}
+
+            {/* Edit modal */}
+            {editTarget && user && (
+                <EditSiteModal
+                    site={editTarget}
+                    userId={user.id}
+                    onClose={() => setEditTarget(null)}
+                    onUpdated={() => { setEditTarget(null); fetchSites(); }}
+                />
+            )}
+
             {/* Header */}
             <header className="h-16 bg-white border-b border-zinc-200 px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
                 <div>
@@ -224,7 +474,12 @@ export const Sites: React.FC = () => {
                         {/* Site cards grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                             {sites.map(site => (
-                                <SiteCard key={site.id} site={site} />
+                                <SiteCard
+                                    key={site.id}
+                                    site={site}
+                                    onEdit={setEditTarget}
+                                    onDelete={setDeleteTarget}
+                                />
                             ))}
 
                             {/* "Add more" slot — disabled/locked when at limit */}
