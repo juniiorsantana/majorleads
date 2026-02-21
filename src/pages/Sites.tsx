@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Globe, Plus, Copy, Check, ExternalLink, Code2,
     MoreVertical, Trash2, CheckCircle2, Clock, Loader2,
-    Zap, ChevronRight, Lock, Pencil, AlertTriangle, X
+    Zap, ChevronRight, Lock, Pencil, AlertTriangle, X,
+    Wifi, WifiOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
@@ -231,16 +232,44 @@ function SiteCard({
     onDelete,
 }: {
     site: Site;
+    key?: React.Key;
     onEdit: (s: Site) => void;
     onDelete: (s: Site) => void;
 }) {
     const [copied, setCopied] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [testStatus, setTestStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
+    const [testInfo, setTestInfo] = useState<{ count: number; lastAt: string } | null>(null);
 
     const copyToken = () => {
         navigator.clipboard.writeText(site.id);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const testConnection = async () => {
+        setTestStatus('checking');
+        setTestInfo(null);
+        try {
+            const { data, count, error } = await supabase
+                .from('events')
+                .select('created_at', { count: 'exact', head: false })
+                .eq('site_id', site.id)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (error) throw error;
+
+            if (count && count > 0 && data && data.length > 0) {
+                setTestInfo({ count, lastAt: data[0].created_at });
+                setTestStatus('success');
+            } else {
+                setTestStatus('error');
+            }
+        } catch (err) {
+            console.error('Test connection error:', err);
+            setTestStatus('error');
+        }
     };
 
     const snippet = `<script src="https://tracker.majorhub.com.br/tracker.js" data-token="${site.id}" async></script>`;
@@ -307,6 +336,42 @@ function SiteCard({
                         desde {new Date(site.created_at).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
                     </span>
                 </div>
+
+                {/* Connection test */}
+                {testStatus === 'idle' && (
+                    <button
+                        onClick={testConnection}
+                        className="flex items-center gap-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-800 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg transition-all active:scale-95 w-fit"
+                    >
+                        <Wifi size={13} /> Testar conexão
+                    </button>
+                )}
+                {testStatus === 'checking' && (
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 px-3 py-1.5">
+                        <Loader2 size={13} className="animate-spin" /> Verificando...
+                    </div>
+                )}
+                {testStatus === 'success' && testInfo && (
+                    <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
+                        <CheckCircle2 size={13} className="shrink-0" />
+                        <span>
+                            <span className="font-semibold">{testInfo.count} evento{testInfo.count !== 1 ? 's' : ''}</span>
+                            {' · Último: '}
+                            {new Date(testInfo.lastAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                )}
+                {testStatus === 'error' && (
+                    <div className="flex items-center justify-between gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
+                        <div className="flex items-center gap-1.5">
+                            <WifiOff size={13} className="shrink-0" />
+                            Nenhum evento recebido ainda
+                        </div>
+                        <button onClick={() => setTestStatus('idle')} className="text-amber-500 hover:text-amber-700 underline underline-offset-2 font-medium">
+                            Tentar de novo
+                        </button>
+                    </div>
+                )}
 
                 <div className="flex items-center gap-2 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2">
                     <code className="text-xs font-mono text-zinc-500 flex-1 truncate">{site.id}</code>
