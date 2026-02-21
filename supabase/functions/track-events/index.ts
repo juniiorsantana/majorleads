@@ -194,7 +194,7 @@ serve(async (req) => {
                     url: evt.url || null,
                     path: evt.path || null,
                     properties: evt.properties || {},
-                    timestamp: new Date(evt.timestamp).toISOString(),
+                    timestamp: evt.timestamp,
                 });
             } else {
                 invalidEvents.push({ event: evt, issues: validation.error.issues })
