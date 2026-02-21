@@ -26,20 +26,7 @@ export function flush(): void {
 
     clearTimer();
 
-    // Usa Beacon API primeiro (funciona mesmo no beforeunload)
-    if (navigator.sendBeacon) {
-        const blob = new Blob(
-            [JSON.stringify({ events: batch })],
-            { type: 'application/json' }
-        );
-        const success = navigator.sendBeacon(
-            `${BASE_URL}/track-events?apikey=${SUPABASE_ANON_KEY}`,
-            blob
-        );
-        if (success) return;
-    }
-
-    // Fallback: fetch com retry
+    // fetch com keepalive garante envio mesmo no beforeunload (sem CORS issues do sendBeacon)
     sendWithRetry(batch);
 }
 
