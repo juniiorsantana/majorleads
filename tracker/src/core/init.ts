@@ -162,7 +162,7 @@ function buildSDK(): LeadSenseSDK {
 
 // ─── Init ────────────────────────────────────────────────────────
 async function init(): Promise<void> {
-    const scriptEl = document.currentScript as HTMLScriptElement | null;
+    const scriptEl = (document.currentScript || document.querySelector('script[src*="tracker.js"]')) as HTMLScriptElement | null;
     token = scriptEl?.getAttribute('data-token') || window.LeadSense?._token || '';
 
     if (!token) {

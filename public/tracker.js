@@ -1,41 +1,1233 @@
-(function(){"use strict";const R="_ls_vid",H="_ls_sid",K="leadsense_vid",X="leadsense_sid",V="leadsense_profile";function W(){const e=new Uint8Array(16);crypto.getRandomValues(e),e[6]=e[6]&15|64,e[8]=e[8]&63|128;const t=Array.from(e).map(n=>n.toString(16).padStart(2,"0")).join("");return`${t.slice(0,8)}-${t.slice(8,12)}-${t.slice(12,16)}-${t.slice(16,20)}-${t.slice(20)}`}function S(e,t,n){const o=n>0?`; expires=${new Date(Date.now()+n*864e5).toUTCString()}`:"";document.cookie=`${e}=${t}${o}; path=/; SameSite=Lax`}function F(e){const t=document.cookie.match(new RegExp(`(?:^|; )${e}=([^;]*)`));return t?decodeURIComponent(t[1]):null}function A(e,t){try{localStorage.setItem(e,t)}catch{}}function N(e){try{return localStorage.getItem(e)}catch{return null}}function he(){const e=F(R);if(e)return e;const t=N(K);if(t)return S(R,t,365),t;const n=W();return S(R,n,365),A(K,n),n}function ge(){const e=F(H);if(e)return e;const t=N(X);if(t)return S(H,t,0),t;const n=W();return S(H,n,0),A(X,n),n}function we(e,t){const n=N(V);if(n)try{const i=JSON.parse(n);return i.session_id!==t&&(i.session_id=t,i.session_count+=1,i.is_returning=!0,i.last_seen=new Date().toISOString(),j(i)),i}catch{}const o={visitor_id:e,session_id:t,is_returning:!1,session_count:1,first_seen:new Date().toISOString(),last_seen:new Date().toISOString(),identified:!1,lead:{name:null,email:null,whatsapp:null}};return j(o),o}function j(e){A(V,JSON.stringify(e))}function Y(){return F("_ls_optout")==="1"||N("_ls_optout")==="1"}function G(){S("_ls_optout","1",365*10),A("_ls_optout","1")}function ye(){S("_ls_optout","",-1);try{localStorage.removeItem("_ls_optout")}catch{}}function Z(){const e=he(),t=ge(),n=we(e,t);return{visitorId:e,sessionId:t,profile:n}}function ve(){const e=navigator.userAgent;let t="Unknown";/Windows/.test(e)?t="Windows":/Mac OS X/.test(e)?t="macOS":/Android/.test(e)?t="Android":/iPhone|iPad/.test(e)?t="iOS":/Linux/.test(e)&&(t="Linux");let n="Unknown";return/Edg\//.test(e)?n="Edge":/Chrome\//.test(e)?n="Chrome":/Firefox\//.test(e)?n="Firefox":/Safari\//.test(e)&&(n="Safari"),{os:t,browser:n}}function Se(){return/Mobi|Android/i.test(navigator.userAgent)?"mobile":/Tablet|iPad/i.test(navigator.userAgent)?"tablet":"desktop"}function T(e){return new URLSearchParams(location.search).get(e)}function be(){try{return document.referrer?new URL(document.referrer).hostname:""}catch{return""}}function Q(){const{os:e,browser:t}=ve();return{utm_source:T("utm_source"),utm_medium:T("utm_medium"),utm_campaign:T("utm_campaign"),utm_term:T("utm_term"),utm_content:T("utm_content"),referrer:document.referrer,referrer_domain:be(),url:location.href,path:location.pathname,title:document.title,device_type:Se(),os:e,browser:t,screen_width:screen.width,screen_height:screen.height,language:navigator.language,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,created_at:new Date().toISOString()}}const Le="https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1",ee="_ls_config",Ee=300*1e3;let C=null;function Te(e){try{const t=localStorage.getItem(`${ee}_${e}`);if(!t)return null;const n=JSON.parse(t);return Date.now()-n.timestamp>Ee?null:n.data}catch{return null}}function Ce(e,t){try{const n={timestamp:Date.now(),data:t};localStorage.setItem(`${ee}_${e}`,JSON.stringify(n))}catch{}}async function te(e){if(C)return C;const t=Te(e);if(t)return C=t,t;try{const n=await fetch(`${Le}/get-config?token=${e}`,{headers:{"X-LS-Token":e}});if(!n.ok)throw new Error(`Config fetch error: ${n.status}`);const o=await n.json();return C=o,Ce(e,o),o}catch{return{popups:[]}}}function ke(){C=null}const xe=10,Oe=5e3,ne="https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1";let k=[],x=null;function Ie(e){k.push(e),k.length>=xe?D():x||(x=setTimeout(D,Oe))}function D(){if(!k.length)return;const e=k.splice(0,k.length);Ae(),!(navigator.sendBeacon&&navigator.sendBeacon(`${ne}/track-events`,JSON.stringify({events:e})))&&oe(e)}async function oe(e,t=0){const o=[1e3,2e3,4e3];try{await fetch(`${ne}/track-events`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({events:e}),keepalive:!0})}catch{t<2&&setTimeout(()=>oe(e,t+1),o[t])}}function Ae(){x&&(clearTimeout(x),x=null)}function Ne(){window.addEventListener("beforeunload",()=>D(),{once:!0})}const De="https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/enrich-ip";async function Me(e){try{const t=await fetch(De,{method:"GET",headers:{Authorization:`Bearer ${e}`,"X-LS-Token":e}});return t.ok?await t.json():(console.warn("[LeadSense] Failed to fetch IP enrichment data",t.status),null)}catch(t){return console.warn("[LeadSense] Error fetching IP enrichment data",t),null}}const Pe=[25,50,75,90,100];function $e(e){let t=0;const n=new Set;let o=!1;function i(){const r=window.scrollY,a=document.documentElement.scrollHeight-window.innerHeight;return a<=0?100:Math.min(Math.round(r/a*100),100)}function s(){o||(requestAnimationFrame(()=>{const r=i();r>t&&(t=r);for(const a of Pe)r>=a&&!n.has(a)&&(n.add(a),e("scroll_depth",{depth:a}));o=!1}),o=!0)}return window.addEventListener("scroll",s,{passive:!0}),{cleanup:()=>window.removeEventListener("scroll",s),getMaxScroll:()=>t}}function qe(e){if(e.id)return`#${e.id}`;if(e.className&&typeof e.className=="string"){const t=e.className.trim().split(/\s+/).slice(0,2).join(".");return`${e.tagName.toLowerCase()}.${t}`}return e.tagName.toLowerCase()}function Re(e){return(e.textContent||"").trim().slice(0,100)}function He(e){function t(n){const o=n.target.closest('a, button, [role="button"], input[type="submit"]');if(!o)return;const i=o.tagName.toUpperCase(),s=i==="A"?o.href:void 0,r=Re(o),a=qe(o),l=Array.from(o.classList).slice(0,5);e("click",{tag:i,text:r,href:s||null,selector:a,classes:l})}return document.addEventListener("click",t,{capture:!0,passive:!0}),()=>document.removeEventListener("click",t,{capture:!0})}const Fe=[15,30,60,120,300],je=3e4;function Ye(e){const t=Date.now(),n=new Set;let o=null,i=!1;setInterval(()=>{const r=Math.floor((Date.now()-t)/1e3);for(const a of Fe)r>=a&&!n.has(a)&&(n.add(a),e("time_on_page",{seconds:a}))},5e3);function s(){i=!1,o&&clearTimeout(o),o=setTimeout(()=>{i||(i=!0,e("idle",{idle_seconds:30}))},je)}return["mousemove","keydown","scroll","click","touchstart"].forEach(r=>window.addEventListener(r,s,{passive:!0})),s(),{getElapsed:()=>Math.floor((Date.now()-t)/1e3)}}const Ue=5;function Be(e,t,n){let o=!1;document.addEventListener("mouseleave",s=>{o||s.clientY>0||s.relatedTarget===null&&(t()<Ue||(o=!0,e("exit_intent",{scroll_at_exit:ze(),time_on_page:t()}),n({type:"exit_intent"})))}),document.addEventListener("visibilitychange",()=>{document.visibilityState==="hidden"?(e("tab_hidden",{visible_for_seconds:t()}),n({type:"tab_hidden"})):e("tab_visible",{})});let i=window.scrollY;window.addEventListener("scroll",()=>{i-window.scrollY>80&&!o&&n({type:"scroll_up_fast"}),i=window.scrollY},{passive:!0}),history.pushState({_ls_sentinel:!0},"",location.href),window.addEventListener("popstate",s=>{var r;(r=s.state)!=null&&r._ls_sentinel&&(e("back_button",{from_url:location.href}),n({type:"back_button"}),history.pushState({_ls_sentinel:!0},"",location.href))})}function ze(){const e=document.documentElement.scrollHeight-window.innerHeight;return e<=0?100:Math.min(Math.round(window.scrollY/e*100),100)}const Je=["name","email","tel","phone","whatsapp","first","last","fname","lname"],Ke=["card","cvv","cc","cpf","ssn","pan"],M=new Set(["password","hidden","submit","button","file","image","reset"]);function U(e){if(e.hasAttribute("data-ls-ignore")||M.has(e.type))return null;const t=[e.name,e.id,e.autocomplete].filter(Boolean).map(n=>n.toLowerCase());for(const n of t)for(const o of Ke)if(n.includes(o))return null;for(const n of t)for(const o of Je)if(n.includes(o))return o==="email"?"email":o==="tel"||o==="phone"||o==="whatsapp"?"whatsapp":"name";return null}function Xe(e){var t;return e.id||e.getAttribute("name")||((t=e.action)==null?void 0:t.split("/").pop())||"unknown"}function B(e,t){if(e._lsAttached)return;e._lsAttached=!0;const n=Xe(e),o=new Set;let i=!1;e.addEventListener("focusin",s=>{const r=s.target;M.has(r.type)||r.hasAttribute("data-ls-ignore")||U(r)&&(i||(i=!0,t("form_start",{form_id:n,form_action:e.action,field_name:r.name||r.id})))}),e.addEventListener("blur",s=>{const r=s.target;if(M.has(r.type)||r.hasAttribute("data-ls-ignore"))return;const a=U(r);a&&(t("form_field_blur",{form_id:n,field_name:r.name||r.id,field_type:a,has_value:!!r.value}),o.add(a))},!0),e.addEventListener("submit",()=>{var r;const s={};e.querySelectorAll("input, select, textarea").forEach(a=>{if(M.has(a.type)||a.hasAttribute("data-ls-ignore")||!a.value)return;const l=U(a);l&&(o.add(l),["name","email","whatsapp","company"].includes(l)&&(s[l]=a.value.trim()))}),t("form_submit",{form_id:n,form_action:e.action,captured_fields:Array.from(o)}),Object.keys(s).length>0&&typeof window<"u"&&(r=window.LeadSense)!=null&&r.identify&&window.LeadSense.identify(s)})}function Ve(e){document.querySelectorAll("form").forEach(n=>B(n,e)),new MutationObserver(n=>{n.forEach(o=>{o.addedNodes.forEach(i=>{i instanceof Element&&(i.querySelectorAll("form").forEach(s=>B(s,e)),i instanceof HTMLFormElement&&B(i,e))})})}).observe(document.body,{childList:!0,subtree:!0})}function We(e,t){let n=location.pathname;function o(r){const a=new URL(r,location.origin).pathname;if(a===n)return;const l=n;n=a,e("spa_navigation",{from_path:l,to_path:a}),e("page_view",{url:r,title:document.title}),t()}const i=history.pushState.bind(history);history.pushState=function(...r){i(...r),o(location.href)};const s=history.replaceState.bind(history);history.replaceState=function(...r){s(...r),o(location.href)},window.addEventListener("popstate",()=>{o(location.href)})}function Ge(e,t){const{type:n,value:o}=e,i=t.trigger.type;switch(n){case"exit_intent":return i==="exit_intent"||i==="back_button"||i==="tab_hidden";case"time_on_page":return t.timeOnPage>=(o||0);case"scroll_depth":return t.scrollDepth>=(o||0);case"page_load":return i==="page_view";case"idle":return i==="idle";case"tab_hidden":return i==="tab_hidden";default:return!1}}function u(e,t,n){switch(t){case"equals":return String(e)===String(n);case"not_equals":return String(e)!==String(n);case"contains":return String(e).includes(String(n));case"not_contains":return!String(e).includes(String(n));case"starts_with":return String(e).startsWith(String(n));case"gte":return Number(e)>=Number(n);case"lte":return Number(e)<=Number(n);case"gt":return Number(e)>Number(n);case"lt":return Number(e)<Number(n);case"is_set":return e!=null&&e!=="";case"is_not_set":return e==null||e==="";default:return!1}}function Ze(e,t){const{type:n,operator:o,value:i}=e,{session:s,profile:r}=t;switch(n){case"utm_source":return u(s.utm_source,o,i);case"utm_medium":return u(s.utm_medium,o,i);case"utm_campaign":return u(s.utm_campaign,o,i);case"referrer":return u(s.referrer_domain,o,i);case"referrer_domain":return u(s.referrer_domain,o,i);case"url":return u(s.url,o,i);case"path":return u(s.path,o,i);case"device_type":return u(s.device_type,o,i);case"browser":return u(s.browser,o,i);case"language":return u(s.language,o,i);case"session_count":return u(r.session_count,o,i);case"is_returning":return u(r.is_returning,o,i);case"is_identified":return u(r.identified,o,i);case"scroll_depth":return u(t.scrollDepth,o,i);case"time_on_page":return u(t.timeOnPage,o,i);default:return!0}}function Qe(e,t){const{triggers:n,conditions:o}=e.config;return n.length===0||n.some(r=>Ge(r,t))?o.every(r=>Ze(r,t)):!1}const et="_ls_pop_";function ie(e){return`${et}${e}`}function re(e){try{const t=localStorage.getItem(ie(e));return t?JSON.parse(t):null}catch{return null}}function tt(e,t){try{localStorage.setItem(ie(e),JSON.stringify(t))}catch{}}function nt(e,t,n){if(t==="always")return!0;const o=re(e);if(!o)return!0;const i=Date.now();return t==="session"?o.session_id!==n:t==="day"?i-o.last_shown>864e5:t==="week"?i-o.last_shown>7*864e5:!0}function ot(e,t){const n=re(e),o={count:((n==null?void 0:n.count)||0)+1,last_shown:Date.now(),session_id:t};tt(e,o)}function it(e,t,n){const{actions:o=[]}=e.config;for(const i of o)switch(i.type){case"redirect":i.value&&(t("popup_redirect",{popup_id:e.id,url:i.value}),window.location.href=i.value);break;case"open_tab":i.value&&(t("popup_open_tab",{popup_id:e.id,url:i.value}),window.open(i.value,"_blank","noopener noreferrer"));break;case"whatsapp":{const s=i.value.replace(/\D/g,""),r=`https://wa.me/${s}`;t("popup_whatsapp",{popup_id:e.id,phone:s}),window.open(r,"_blank","noopener noreferrer");break}case"webhook":i.value&&(fetch(i.value,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({popup_id:e.id,timestamp:Date.now(),lead:(n==null?void 0:n.lead)||null,visitor_id:(n==null?void 0:n.visitor_id)||null,session_id:(n==null?void 0:n.session_id)||null}),keepalive:!0}).catch(()=>{}),t("popup_webhook",{popup_id:e.id,url:i.value}));break;case"scroll_to":if(i.value){const s=document.querySelector(i.value);s==null||s.scrollIntoView({behavior:"smooth",block:"start"})}break}}const se="__ls_popup_host__";function rt(e,t){const n=t.lead;return e.replace(/\{\{\s*name\s*\}\}/gi,n.name||"").replace(/\{\{\s*email\s*\}\}/gi,n.email||"").replace(/\{\{\s*first_name\s*\}\}/gi,(n.name||"").split(" ")[0]).replace(/\{\{\s*city\s*\}\}/gi,"").replace(/\{\{\s*session_count\s*\}\}/gi,String(t.session_count))}function st(e){const n=new DOMParser().parseFromString(e,"text/html"),o=new Set(["div","span","p","h1","h2","h3","h4","h5","h6","img","a","button","input","form","label","strong","em","br"]);function i(r){if(r.nodeType===Node.ELEMENT_NODE){const l=r,v=l.tagName.toLowerCase();if(!o.has(v)){l.remove();return}const J=Array.from(l.attributes);for(const b of J){const O=b.name.toLowerCase(),L=b.value.toLowerCase();(O.startsWith("on")||(O==="href"||O==="src")&&L.includes("javascript:"))&&l.removeAttribute(b.name)}}const a=Array.from(r.childNodes);for(const l of a)i(l)}const s=Array.from(n.body.childNodes);for(const r of s)i(r);return n.body.innerHTML}function at(e,t){return`
+(function () {
+    'use strict';
+
+    const COOKIE_VID = '_ls_vid';
+    const COOKIE_SID = '_ls_sid';
+    const LS_VID_KEY = 'leadsense_vid';
+    const LS_SID_KEY = 'leadsense_sid';
+    const LS_PROFILE_KEY = 'leadsense_profile';
+    function uuidv4() {
+        const buf = new Uint8Array(16);
+        crypto.getRandomValues(buf);
+        buf[6] = (buf[6] & 0x0f) | 0x40;
+        buf[8] = (buf[8] & 0x3f) | 0x80;
+        const hex = Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join('');
+        return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+    }
+    function setCookie(name, value, days) {
+        const expires = days > 0
+            ? `; expires=${new Date(Date.now() + days * 86400000).toUTCString()}`
+            : '';
+        document.cookie = `${name}=${value}${expires}; path=/; SameSite=Lax`;
+    }
+    function getCookie(name) {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+    function setStorage(key, value) {
+        try {
+            localStorage.setItem(key, value);
+        }
+        catch (_) { }
+    }
+    function getStorage(key) {
+        try {
+            return localStorage.getItem(key);
+        }
+        catch (_) {
+            return null;
+        }
+    }
+    function getOrCreateVisitorId() {
+        const fromCookie = getCookie(COOKIE_VID);
+        if (fromCookie)
+            return fromCookie;
+        const fromLS = getStorage(LS_VID_KEY);
+        if (fromLS) {
+            setCookie(COOKIE_VID, fromLS, 365);
+            return fromLS;
+        }
+        const newId = uuidv4();
+        setCookie(COOKIE_VID, newId, 365);
+        setStorage(LS_VID_KEY, newId);
+        return newId;
+    }
+    function getOrCreateSessionId() {
+        const fromCookie = getCookie(COOKIE_SID);
+        if (fromCookie)
+            return fromCookie;
+        const fromLS = getStorage(LS_SID_KEY);
+        if (fromLS) {
+            setCookie(COOKIE_SID, fromLS, 0);
+            return fromLS;
+        }
+        const newId = uuidv4();
+        setCookie(COOKIE_SID, newId, 0);
+        setStorage(LS_SID_KEY, newId);
+        return newId;
+    }
+    function loadProfile(visitorId, sessionId) {
+        const raw = getStorage(LS_PROFILE_KEY);
+        if (raw) {
+            try {
+                const existing = JSON.parse(raw);
+                if (existing.session_id !== sessionId) {
+                    existing.session_id = sessionId;
+                    existing.session_count += 1;
+                    existing.is_returning = true;
+                    existing.last_seen = new Date().toISOString();
+                    saveProfile(existing);
+                }
+                return existing;
+            }
+            catch (_) { }
+        }
+        const profile = {
+            visitor_id: visitorId,
+            session_id: sessionId,
+            is_returning: false,
+            session_count: 1,
+            first_seen: new Date().toISOString(),
+            last_seen: new Date().toISOString(),
+            identified: false,
+            lead: { name: null, email: null, whatsapp: null },
+        };
+        saveProfile(profile);
+        return profile;
+    }
+    function saveProfile(profile) {
+        setStorage(LS_PROFILE_KEY, JSON.stringify(profile));
+    }
+    function isOptedOut() {
+        return getCookie('_ls_optout') === '1' || getStorage('_ls_optout') === '1';
+    }
+    function setOptOut() {
+        setCookie('_ls_optout', '1', 365 * 10);
+        setStorage('_ls_optout', '1');
+    }
+    function clearOptOut() {
+        setCookie('_ls_optout', '', -1);
+        try {
+            localStorage.removeItem('_ls_optout');
+        }
+        catch (_) { }
+    }
+    function initIdentity() {
+        const visitorId = getOrCreateVisitorId();
+        const sessionId = getOrCreateSessionId();
+        const profile = loadProfile(visitorId, sessionId);
+        return { visitorId, sessionId, profile };
+    }
+
+    function parseUA() {
+        const ua = navigator.userAgent;
+        let os = 'Unknown';
+        if (/Windows/.test(ua))
+            os = 'Windows';
+        else if (/Mac OS X/.test(ua))
+            os = 'macOS';
+        else if (/Android/.test(ua))
+            os = 'Android';
+        else if (/iPhone|iPad/.test(ua))
+            os = 'iOS';
+        else if (/Linux/.test(ua))
+            os = 'Linux';
+        let browser = 'Unknown';
+        if (/Edg\//.test(ua))
+            browser = 'Edge';
+        else if (/Chrome\//.test(ua))
+            browser = 'Chrome';
+        else if (/Firefox\//.test(ua))
+            browser = 'Firefox';
+        else if (/Safari\//.test(ua))
+            browser = 'Safari';
+        return { os, browser };
+    }
+    function getDeviceType() {
+        if (/Mobi|Android/i.test(navigator.userAgent))
+            return 'mobile';
+        if (/Tablet|iPad/i.test(navigator.userAgent))
+            return 'tablet';
+        return 'desktop';
+    }
+    function getUTM(param) {
+        return new URLSearchParams(location.search).get(param);
+    }
+    function getReferrerDomain() {
+        try {
+            return document.referrer ? new URL(document.referrer).hostname : '';
+        }
+        catch (_a) {
+            return '';
+        }
+    }
+    function collectSession() {
+        const { os, browser } = parseUA();
+        return {
+            utm_source: getUTM('utm_source'),
+            utm_medium: getUTM('utm_medium'),
+            utm_campaign: getUTM('utm_campaign'),
+            utm_term: getUTM('utm_term'),
+            utm_content: getUTM('utm_content'),
+            referrer: document.referrer,
+            referrer_domain: getReferrerDomain(),
+            url: location.href,
+            path: location.pathname,
+            title: document.title,
+            device_type: getDeviceType(),
+            os,
+            browser,
+            screen_width: screen.width,
+            screen_height: screen.height,
+            language: navigator.language,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            created_at: new Date().toISOString(),
+        };
+    }
+
+    const BASE_URL$1 = 'https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1';
+    const CACHE_KEY = '_ls_config';
+    const CACHE_TTL_MS = 5 * 60 * 1000;
+    let cachedConfig = null;
+    function loadFromCache(token) {
+        try {
+            const raw = localStorage.getItem(`${CACHE_KEY}_${token}`);
+            if (!raw)
+                return null;
+            const entry = JSON.parse(raw);
+            if (Date.now() - entry.timestamp > CACHE_TTL_MS)
+                return null;
+            return entry.data;
+        }
+        catch (_a) {
+            return null;
+        }
+    }
+    function saveToCache(token, data) {
+        try {
+            const entry = { timestamp: Date.now(), data };
+            localStorage.setItem(`${CACHE_KEY}_${token}`, JSON.stringify(entry));
+        }
+        catch (_a) { }
+    }
+    async function fetchConfig(token) {
+        if (cachedConfig)
+            return cachedConfig;
+        const cached = loadFromCache(token);
+        if (cached) {
+            cachedConfig = cached;
+            return cached;
+        }
+        try {
+            const res = await fetch(`${BASE_URL$1}/get-config?token=${token}`, {
+                headers: { 'X-LS-Token': token },
+            });
+            if (!res.ok)
+                throw new Error(`Config fetch error: ${res.status}`);
+            const data = await res.json();
+            cachedConfig = data;
+            saveToCache(token, data);
+            return data;
+        }
+        catch (_a) {
+            return { popups: [] };
+        }
+    }
+    function invalidateConfig() {
+        cachedConfig = null;
+    }
+
+    const BATCH_SIZE = 10;
+    const FLUSH_INTERVAL_MS = 5000;
+    const BASE_URL = 'https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1';
+    let queue = [];
+    let flushTimer = null;
+    function enqueue(event) {
+        queue.push(event);
+        if (queue.length >= BATCH_SIZE) {
+            flush();
+        }
+        else if (!flushTimer) {
+            flushTimer = setTimeout(flush, FLUSH_INTERVAL_MS);
+        }
+    }
+    function flush() {
+        if (!queue.length)
+            return;
+        const batch = queue.splice(0, queue.length);
+        clearTimer();
+        if (navigator.sendBeacon) {
+            const success = navigator.sendBeacon(`${BASE_URL}/track-events`, JSON.stringify({ events: batch }));
+            if (success)
+                return;
+        }
+        sendWithRetry(batch);
+    }
+    async function sendWithRetry(events, attempt = 0) {
+        const MAX_ATTEMPTS = 3;
+        const backoff = [1000, 2000, 4000];
+        try {
+            await fetch(`${BASE_URL}/track-events`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ events }),
+                keepalive: true,
+            });
+        }
+        catch (_a) {
+            if (attempt < MAX_ATTEMPTS - 1) {
+                setTimeout(() => sendWithRetry(events, attempt + 1), backoff[attempt]);
+            }
+        }
+    }
+    function clearTimer() {
+        if (flushTimer) {
+            clearTimeout(flushTimer);
+            flushTimer = null;
+        }
+    }
+    function setupBeforeUnloadFlush() {
+        window.addEventListener('beforeunload', () => flush(), { once: true });
+    }
+
+    const ENRICH_IP_ENDPOINT = 'https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/enrich-ip';
+    async function fetchIpEnrichment(token) {
+        try {
+            const response = await fetch(ENRICH_IP_ENDPOINT, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'X-LS-Token': token,
+                },
+            });
+            if (!response.ok) {
+                console.warn('[LeadSense] Failed to fetch IP enrichment data', response.status);
+                return null;
+            }
+            const data = await response.json();
+            return data;
+        }
+        catch (error) {
+            console.warn('[LeadSense] Error fetching IP enrichment data', error);
+            return null;
+        }
+    }
+
+    const THRESHOLDS = [25, 50, 75, 90, 100];
+    function initScrollCollector(track) {
+        let maxScroll = 0;
+        const fired = new Set();
+        let ticking = false;
+        function getScrollPercent() {
+            const scrolled = window.scrollY;
+            const height = document.documentElement.scrollHeight - window.innerHeight;
+            if (height <= 0)
+                return 100;
+            return Math.min(Math.round((scrolled / height) * 100), 100);
+        }
+        function onScroll() {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    const pct = getScrollPercent();
+                    if (pct > maxScroll)
+                        maxScroll = pct;
+                    for (const threshold of THRESHOLDS) {
+                        if (pct >= threshold && !fired.has(threshold)) {
+                            fired.add(threshold);
+                            track('scroll_depth', { depth: threshold });
+                        }
+                    }
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return {
+            cleanup: () => window.removeEventListener('scroll', onScroll),
+            getMaxScroll: () => maxScroll,
+        };
+    }
+
+    function getSelector(el) {
+        if (el.id)
+            return `#${el.id}`;
+        if (el.className && typeof el.className === 'string') {
+            const cls = el.className.trim().split(/\s+/).slice(0, 2).join('.');
+            return `${el.tagName.toLowerCase()}.${cls}`;
+        }
+        return el.tagName.toLowerCase();
+    }
+    function getTextContent(el) {
+        return (el.textContent || '').trim().slice(0, 100);
+    }
+    function initClickCollector(track) {
+        function onDocumentClick(e) {
+            const target = e.target.closest('a, button, [role="button"], input[type="submit"]');
+            if (!target)
+                return;
+            const tag = target.tagName.toUpperCase();
+            const href = tag === 'A' ? target.href : undefined;
+            const text = getTextContent(target);
+            const selector = getSelector(target);
+            const classes = Array.from(target.classList).slice(0, 5);
+            track('click', {
+                tag,
+                text,
+                href: href || null,
+                selector,
+                classes,
+            });
+        }
+        document.addEventListener('click', onDocumentClick, { capture: true, passive: true });
+        return () => document.removeEventListener('click', onDocumentClick, { capture: true });
+    }
+
+    const TIME_THRESHOLDS = [15, 30, 60, 120, 300];
+    const IDLE_THRESHOLD = 30000;
+    function initTimeCollector(track) {
+        const startTime = Date.now();
+        const fired = new Set();
+        let idleTimer = null;
+        let idleFired = false;
+        setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            for (const threshold of TIME_THRESHOLDS) {
+                if (elapsed >= threshold && !fired.has(threshold)) {
+                    fired.add(threshold);
+                    track('time_on_page', { seconds: threshold });
+                }
+            }
+        }, 5000);
+        function resetIdle() {
+            idleFired = false;
+            if (idleTimer)
+                clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                if (!idleFired) {
+                    idleFired = true;
+                    track('idle', { idle_seconds: 30 });
+                }
+            }, IDLE_THRESHOLD);
+        }
+        ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'].forEach(evt => window.addEventListener(evt, resetIdle, { passive: true }));
+        resetIdle();
+        return {
+            getElapsed: () => Math.floor((Date.now() - startTime) / 1000),
+        };
+    }
+
+    const MIN_TIME_BEFORE_EXIT = 5;
+    function initExitIntentCollector(track, getElapsed, evaluateTriggers) {
+        let exitFired = false;
+        document.addEventListener('mouseleave', (e) => {
+            if (exitFired)
+                return;
+            if (e.clientY > 0)
+                return;
+            if (e.relatedTarget !== null)
+                return;
+            if (getElapsed() < MIN_TIME_BEFORE_EXIT)
+                return;
+            exitFired = true;
+            track('exit_intent', {
+                scroll_at_exit: getScrollPercent(),
+                time_on_page: getElapsed(),
+            });
+            evaluateTriggers({ type: 'exit_intent' });
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                track('tab_hidden', { visible_for_seconds: getElapsed() });
+                evaluateTriggers({ type: 'tab_hidden' });
+            }
+            else {
+                track('tab_visible', {});
+            }
+        });
+        let lastScrollY = window.scrollY;
+        window.addEventListener('scroll', () => {
+            const delta = lastScrollY - window.scrollY;
+            if (delta > 80 && !exitFired) {
+                evaluateTriggers({ type: 'scroll_up_fast' });
+            }
+            lastScrollY = window.scrollY;
+        }, { passive: true });
+        history.pushState({ _ls_sentinel: true }, '', location.href);
+        window.addEventListener('popstate', (e) => {
+            var _a;
+            if ((_a = e.state) === null || _a === void 0 ? void 0 : _a._ls_sentinel) {
+                track('back_button', { from_url: location.href });
+                evaluateTriggers({ type: 'back_button' });
+                history.pushState({ _ls_sentinel: true }, '', location.href);
+            }
+        });
+    }
+    function getScrollPercent() {
+        const h = document.documentElement.scrollHeight - window.innerHeight;
+        if (h <= 0)
+            return 100;
+        return Math.min(Math.round((window.scrollY / h) * 100), 100);
+    }
+
+    const ALLOWED_MATCHERS = ['name', 'email', 'tel', 'phone', 'whatsapp', 'first', 'last', 'fname', 'lname'];
+    const BLOCKED_MATCHERS = ['card', 'cvv', 'cc', 'cpf', 'ssn', 'pan'];
+    const IGNORED_TYPES = new Set(['password', 'hidden', 'submit', 'button', 'file', 'image', 'reset']);
+    function detectFieldType(input) {
+        if (input.hasAttribute('data-ls-ignore') || IGNORED_TYPES.has(input.type))
+            return null;
+        const attrs = [
+            input.name,
+            input.id,
+            input.autocomplete
+        ].filter(Boolean).map(v => v.toLowerCase());
+        for (const attr of attrs) {
+            for (const block of BLOCKED_MATCHERS) {
+                if (attr.includes(block))
+                    return null;
+            }
+        }
+        for (const attr of attrs) {
+            for (const allowed of ALLOWED_MATCHERS) {
+                if (attr.includes(allowed)) {
+                    return allowed === 'email' ? 'email'
+                        : (allowed === 'tel' || allowed === 'phone' || allowed === 'whatsapp') ? 'whatsapp'
+                            : 'name';
+                }
+            }
+        }
+        return null;
+    }
+    function getFormId(form) {
+        var _a;
+        return form.id || form.getAttribute('name') || ((_a = form.action) === null || _a === void 0 ? void 0 : _a.split('/').pop()) || 'unknown';
+    }
+    function attachFormListener(form, track) {
+        if (form._lsAttached)
+            return;
+        form._lsAttached = true;
+        const formId = getFormId(form);
+        const capturedTypes = new Set();
+        let started = false;
+        form.addEventListener('focusin', (e) => {
+            const input = e.target;
+            if (IGNORED_TYPES.has(input.type) || input.hasAttribute('data-ls-ignore'))
+                return;
+            if (!detectFieldType(input))
+                return;
+            if (!started) {
+                started = true;
+                track('form_start', {
+                    form_id: formId,
+                    form_action: form.action,
+                    field_name: input.name || input.id,
+                });
+            }
+        });
+        form.addEventListener('blur', (e) => {
+            const input = e.target;
+            if (IGNORED_TYPES.has(input.type) || input.hasAttribute('data-ls-ignore'))
+                return;
+            const fieldType = detectFieldType(input);
+            if (!fieldType)
+                return;
+            track('form_field_blur', {
+                form_id: formId,
+                field_name: input.name || input.id,
+                field_type: fieldType,
+                has_value: !!input.value,
+            });
+            capturedTypes.add(fieldType);
+        }, true);
+        form.addEventListener('submit', () => {
+            var _a;
+            const leadData = {};
+            form.querySelectorAll('input, select, textarea').forEach(input => {
+                if (IGNORED_TYPES.has(input.type) || input.hasAttribute('data-ls-ignore') || !input.value)
+                    return;
+                const fieldType = detectFieldType(input);
+                if (fieldType) {
+                    capturedTypes.add(fieldType);
+                    if (['name', 'email', 'whatsapp', 'company'].includes(fieldType)) {
+                        leadData[fieldType] = input.value.trim();
+                    }
+                }
+            });
+            track('form_submit', {
+                form_id: formId,
+                form_action: form.action,
+                captured_fields: Array.from(capturedTypes),
+            });
+            if (Object.keys(leadData).length > 0) {
+                if (typeof window !== 'undefined' && ((_a = window.LeadSense) === null || _a === void 0 ? void 0 : _a.identify)) {
+                    window.LeadSense.identify(leadData);
+                }
+            }
+        });
+    }
+    function initFormCollector(track) {
+        document.querySelectorAll('form').forEach(f => attachFormListener(f, track));
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node instanceof Element) {
+                        node.querySelectorAll('form').forEach(f => attachFormListener(f, track));
+                        if (node instanceof HTMLFormElement)
+                            attachFormListener(node, track);
+                    }
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function initSpaCollector(track, onRouteChange) {
+        let currentPath = location.pathname;
+        function handleRouteChange(newUrl) {
+            const newPath = new URL(newUrl, location.origin).pathname;
+            if (newPath === currentPath)
+                return;
+            const from = currentPath;
+            currentPath = newPath;
+            track('spa_navigation', { from_path: from, to_path: newPath });
+            track('page_view', { url: newUrl, title: document.title });
+            onRouteChange();
+        }
+        const originalPush = history.pushState.bind(history);
+        history.pushState = function (...args) {
+            originalPush(...args);
+            handleRouteChange(location.href);
+        };
+        const originalReplace = history.replaceState.bind(history);
+        history.replaceState = function (...args) {
+            originalReplace(...args);
+            handleRouteChange(location.href);
+        };
+        window.addEventListener('popstate', () => {
+            handleRouteChange(location.href);
+        });
+    }
+
+    function evalTriggerType(config, ctx) {
+        const { type, value } = config;
+        const evtType = ctx.triggerType;
+        switch (type) {
+            case 'exit_intent':
+                return evtType === 'exit_intent' || evtType === 'back_button' || evtType === 'tab_hidden';
+            case 'time_on_page':
+                return ctx.timeOnPage >= (value || 0);
+            case 'scroll_depth':
+                return ctx.scrollDepth >= (value || 0);
+            case 'inactivity':
+                return evtType === 'idle';
+            default:
+                return false;
+        }
+    }
+    function evalTargetAudience(config, ctx) {
+        const { device, visitorType } = config.targetAudience;
+        if (device !== 'all') {
+            const isMobile = ctx.session.screen_width < 768;
+            if (device === 'mobile' && !isMobile)
+                return false;
+            if (device === 'desktop' && isMobile)
+                return false;
+        }
+        if (visitorType !== 'all') {
+            const isReturning = ctx.profile.is_returning;
+            if (visitorType === 'new' && isReturning)
+                return false;
+            if (visitorType === 'returning' && !isReturning)
+                return false;
+        }
+        return true;
+    }
+    function evalUrlRules(config, ctx) {
+        const { urlRules } = config;
+        if (!urlRules || urlRules.length === 0)
+            return true;
+        const currentUrl = ctx.session.url || '';
+        const currentPath = ctx.session.path || '';
+        for (const rule of urlRules) {
+            let matches = false;
+            const target = rule.value.toLowerCase();
+            const urlLower = currentUrl.toLowerCase();
+            const pathLower = currentPath.toLowerCase();
+            switch (rule.condition) {
+                case 'equals':
+                    matches = urlLower === target || pathLower === target || pathLower === `/${target}`;
+                    break;
+                case 'contains':
+                    matches = urlLower.includes(target);
+                    break;
+                case 'starts_with':
+                    matches = pathLower.startsWith(target.startsWith('/') ? target : `/${target}`);
+                    break;
+            }
+            if (matches)
+                return true;
+        }
+        return false;
+    }
+    function shouldShowPopup(popup, ctx) {
+        const config = popup.trigger_config;
+        if (!config)
+            return false;
+        if (!evalTriggerType(config, ctx))
+            return false;
+        if (!evalTargetAudience(config, ctx))
+            return false;
+        if (!evalUrlRules(config, ctx))
+            return false;
+        return true;
+    }
+
+    const PREFIX = '_ls_pop_';
+    function storageKey(popupId) {
+        return `${PREFIX}${popupId}`;
+    }
+    function loadRecord(popupId) {
+        try {
+            const raw = localStorage.getItem(storageKey(popupId));
+            return raw ? JSON.parse(raw) : null;
+        }
+        catch (_a) {
+            return null;
+        }
+    }
+    function saveRecord(popupId, record) {
+        try {
+            localStorage.setItem(storageKey(popupId), JSON.stringify(record));
+        }
+        catch (_a) { }
+    }
+    function canShow(popupId, rule, sessionId) {
+        if (rule === 'always')
+            return true;
+        const rec = loadRecord(popupId);
+        if (!rec)
+            return true;
+        const now = Date.now();
+        if (rule === 'session') {
+            return rec.session_id !== sessionId;
+        }
+        if (rule === 'day') {
+            return now - rec.last_shown > 86400000;
+        }
+        if (rule === 'week') {
+            return now - rec.last_shown > 7 * 86400000;
+        }
+        return true;
+    }
+    function markShown(popupId, sessionId) {
+        const existing = loadRecord(popupId);
+        const record = {
+            count: ((existing === null || existing === void 0 ? void 0 : existing.count) || 0) + 1,
+            last_shown: Date.now(),
+            session_id: sessionId,
+        };
+        saveRecord(popupId, record);
+    }
+
+    function executeActions(popup, track, profile) {
+        var _a, _b, _c;
+        const action = popup.actions_config;
+        if (!action)
+            return;
+        switch (action.type) {
+            case 'redirect':
+                if ((_a = action.redirect) === null || _a === void 0 ? void 0 : _a.url) {
+                    let finalUrl = action.redirect.url;
+                    const utms = action.redirect.utms;
+                    if (utms && (utms.source || utms.medium || utms.campaign)) {
+                        const urlObj = new URL(finalUrl, window.location.origin);
+                        if (utms.source)
+                            urlObj.searchParams.set('utm_source', utms.source);
+                        if (utms.medium)
+                            urlObj.searchParams.set('utm_medium', utms.medium);
+                        if (utms.campaign)
+                            urlObj.searchParams.set('utm_campaign', utms.campaign);
+                        if (utms.term)
+                            urlObj.searchParams.set('utm_term', utms.term);
+                        if (utms.content)
+                            urlObj.searchParams.set('utm_content', utms.content);
+                        finalUrl = urlObj.toString();
+                    }
+                    track('popup_redirect', { popup_id: popup.id, url: finalUrl });
+                    if (action.redirect.openInNewTab) {
+                        window.open(finalUrl, '_blank', 'noopener noreferrer');
+                    }
+                    else {
+                        window.location.href = finalUrl;
+                    }
+                }
+                break;
+            case 'whatsapp': {
+                if ((_b = action.whatsapp) === null || _b === void 0 ? void 0 : _b.number) {
+                    const phone = action.whatsapp.number.replace(/\D/g, '');
+                    let url = `https://wa.me/${phone}`;
+                    if (action.whatsapp.message) {
+                        url += `?text=${encodeURIComponent(action.whatsapp.message)}`;
+                    }
+                    track('popup_whatsapp', { popup_id: popup.id, phone });
+                    window.open(url, '_blank', 'noopener noreferrer');
+                }
+                break;
+            }
+            case 'webhook':
+                if ((_c = action.webhook) === null || _c === void 0 ? void 0 : _c.url) {
+                    fetch(action.webhook.url, {
+                        method: action.webhook.method || 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            popup_id: popup.id,
+                            timestamp: Date.now(),
+                            lead: (profile === null || profile === void 0 ? void 0 : profile.lead) || null,
+                            visitor_id: (profile === null || profile === void 0 ? void 0 : profile.visitor_id) || null,
+                            session_id: (profile === null || profile === void 0 ? void 0 : profile.session_id) || null
+                        }),
+                        keepalive: true,
+                    }).catch(() => { });
+                    track('popup_webhook', { popup_id: popup.id, url: action.webhook.url });
+                }
+                break;
+            case 'success_message':
+                track('popup_success', { popup_id: popup.id });
+                break;
+        }
+    }
+
+    const HOST_ID = '__ls_popup_host__';
+    function interpolate(html, profile) {
+        const lead = profile.lead;
+        return html
+            .replace(/\{\{\s*name\s*\}\}/gi, lead.name || '')
+            .replace(/\{\{\s*email\s*\}\}/gi, lead.email || '')
+            .replace(/\{\{\s*first_name\s*\}\}/gi, (lead.name || '').split(' ')[0])
+            .replace(/\{\{\s*city\s*\}\}/gi, '')
+            .replace(/\{\{\s*session_count\s*\}\}/gi, String(profile.session_count));
+    }
+    function getAnimationCSS(type) {
+        const base = `
     @keyframes ls-fade-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes ls-slide-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes ls-slide-down { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes ls-slide-right { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-  
-.__ls-popup-inner { animation: ${e==="fade"?"ls-fade-in":t==="top_bar"?"ls-slide-down":t==="slide_in"?"ls-slide-right":"ls-slide-up"} 0.35s ease forwards; }`}function ct(e){const{type:t,position:n}=e.config.template,o={center:"align-items: center; justify-content: center;",top:"align-items: flex-start; justify-content: center; padding-top: 40px;",bottom:"align-items: flex-end; justify-content: center; padding-bottom: 40px;","bottom-right":"align-items: flex-end; justify-content: flex-end; padding: 20px;","bottom-left":"align-items: flex-end; justify-content: flex-start; padding: 20px;"},i=o[n]||o.center;return t==="top_bar"?`<div class="__ls-popup-overlay" style="
-      position: fixed; top: 0; left: 0; right: 0; z-index: 2147483640;
-      display: flex; flex-direction: column; pointer-events: none;
-    ">`:t==="toast"||t==="slide_in"?`<div class="__ls-popup-overlay" style="
-      position: fixed; inset: 0; z-index: 2147483640; pointer-events: none;
-      display: flex; ${i}
-    ">`:`<div class="__ls-popup-overlay" style="
-    position: fixed; inset: 0; z-index: 2147483640;
-    background: rgba(0,0,0,0.5); display: flex; ${i}
-  " data-ls-close-overlay>`}const lt=`
+  `;
+        const anim = type === 'modal' ? 'ls-fade-in'
+            : type === 'top-bar' ? 'ls-slide-down'
+                : type === 'slide-in' ? 'ls-slide-right'
+                    : 'ls-slide-up';
+        return `${base}\n.__ls-popup-inner { animation: ${anim} 0.35s ease forwards; }`;
+    }
+    function toInlineStyle(props, isContainer = false) {
+        const styleString = Object.entries(props)
+            .filter(([k, v]) => v !== undefined && v !== '' && !['text', 'src', 'alt', 'placeholder', 'fieldType', 'name', 'required'].includes(k))
+            .map(([k, v]) => {
+            let cssKey = k.replace(/([A-Z])/g, "-$1").toLowerCase();
+            let cssVal = v;
+            if (typeof v === 'number' && !['opacity', 'zIndex', 'fontWeight', 'lineHeight'].includes(k)) {
+                cssVal = `${v}px`;
+            }
+            return `${cssKey}: ${cssVal}`;
+        })
+            .join('; ');
+        if (!isContainer)
+            return styleString;
+        return `${styleString}; max-width: 100%; word-break: break-word;`;
+    }
+    function generateLayerHTML(layer, profile) {
+        const { type, props = {} } = layer;
+        let html = '';
+        switch (type) {
+            case 'heading':
+            case 'text': {
+                const tag = type === 'heading' ? 'h2' : 'p';
+                const text = interpolate(props.text || '', profile);
+                const style = toInlineStyle(Object.assign(Object.assign({}, props), { marginBottom: 12 }), true);
+                html = `<${tag} style="margin: 0; ${style}">${text}</${tag}>`;
+                break;
+            }
+            case 'hero_image':
+            case 'avatar_image': {
+                const src = props.src || '';
+                const alt = props.alt || '';
+                const defaultAvatarStyle = type === 'avatar_image' ? { borderRadius: '50%', objectFit: 'cover', width: 64, height: 64 } : { maxWidth: '100%', objectFit: 'cover', borderRadius: 8 };
+                const style = toInlineStyle(Object.assign(Object.assign(Object.assign({}, defaultAvatarStyle), props), { marginBottom: 16 }), true);
+                html = `<img src="${src}" alt="${alt}" style="${style}" />`;
+                break;
+            }
+            case 'button': {
+                const text = interpolate(props.text || 'Submit', profile);
+                const style = toInlineStyle(Object.assign({ padding: '12px 24px', border: 'none', cursor: 'pointer', width: '100%', fontWeight: 'bold', transition: 'opacity 0.2s' }, props));
+                html = `<button data-ls-submit style="${style}">${text}</button>`;
+                break;
+            }
+            case 'input_field': {
+                const placeholder = interpolate(props.placeholder || '', profile);
+                const fieldType = props.fieldType || 'text';
+                const name = props.name || fieldType;
+                const required = props.required ? 'required' : '';
+                const style = toInlineStyle(Object.assign({ padding: '12px', border: '1px solid #e5e7eb', borderRadius: 6, width: '100%', marginBottom: 12, outline: 'none' }, props));
+                html = `<input type="${fieldType}" name="${name}" placeholder="${placeholder}" ${required} style="${style}" />`;
+                break;
+            }
+            default:
+                console.warn('Unknown layer type:', type);
+        }
+        return html;
+    }
+    function buildWrapper(popup) {
+        const { type } = popup;
+        const baseOverlay = `position: fixed; inset: 0; z-index: 2147483640; display: flex; box-sizing: border-box;`;
+        if (type === 'top-bar') {
+            return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: flex-start; pointer-events: none; bottom: auto;">`;
+        }
+        if (type === 'toast' || type === 'slide-in') {
+            return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: flex-end; justify-content: flex-end; padding: 20px; pointer-events: none;">`;
+        }
+        return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: center; justify-content: center; background: rgba(0,0,0,0.5); padding: 16px;" data-ls-close-overlay>`;
+    }
+    function getContainerStyle(type) {
+        const base = `background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 24px; position: relative; pointer-events: auto; display: flex; flex-direction: column; width: 100%;`;
+        if (type === 'top-bar')
+            return `background: white; width: 100%; padding: 12px 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 16px;`;
+        if (type === 'toast' || type === 'slide-in')
+            return `${base} max-width: 360px;`;
+        return `${base} max-width: 450px;`;
+    }
+    const CLOSE_BTN_HTML = `
 <button data-ls-close style="
   position: absolute; top: 12px; right: 12px;
   background: none; border: none; cursor: pointer;
-  color: inherit; font-size: 20px; line-height: 1;
+  color: #71717a; font-size: 20px; line-height: 1;
   opacity: 0.7; padding: 4px;
 " aria-label="Fechar">✕</button>
-`;function ae(e,t,n,o){var pe,me;ce();const{content:i,animation:s,type:r}=e.config.template,a=document.createElement("div");a.id=se,document.body.appendChild(a);let l;try{l=a.attachShadow({mode:"open"})}catch{l=a}const v=`
-    ${at(s,r)}
-    .__ls-popup-inner {
-      position: relative;
-      max-width: 95vw;
-      pointer-events: auto;
-      box-sizing: border-box;
-    }
-    .__ls-popup-inner * { box-sizing: border-box; }
-    ${i.css||""}
-  `,J=rt(i.html,t),b=st(J),O=ct(e);l.innerHTML=`
-    <style>${v}</style>
-    ${O}
-      <div class="__ls-popup-inner">
-        ${lt}
-        ${b}
+`;
+    function renderPopup(popup, profile, track, onClose) {
+        var _a, _b;
+        closeActivePopup();
+        const { type, layers = [] } = popup;
+        const host = document.createElement('div');
+        host.id = HOST_ID;
+        document.body.appendChild(host);
+        let shadow;
+        try {
+            shadow = host.attachShadow({ mode: 'open' });
+        }
+        catch (_c) {
+            shadow = host;
+        }
+        const css = `
+    ${getAnimationCSS(type)}
+    .__ls-popup-inner * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    .__ls-popup-inner input::placeholder { color: #a1a1aa; }
+    .__ls-popup-inner button:hover { opacity: 0.9; }
+  `;
+        const contentHtml = layers.map(layer => generateLayerHTML(layer, profile)).join('');
+        const wrapper = buildWrapper(popup);
+        const containerStyle = getContainerStyle(type);
+        shadow.innerHTML = `
+    <style>${css}</style>
+    ${wrapper}
+      <div class="__ls-popup-inner" style="${containerStyle}">
+        ${type !== 'top-bar' ? CLOSE_BTN_HTML : ''}
+        ${type === 'top-bar' ? `<div style="display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 1200px;">${contentHtml}${CLOSE_BTN_HTML.replace('absolute; top: 12px; right: 12px;', 'relative; top: 0; right: 0;')}</div>` : contentHtml}
       </div>
     </div>
-  `;function L(){n("popup_closed",{popup_id:e.id}),ce(),o()}(pe=l.querySelector("[data-ls-close]"))==null||pe.addEventListener("click",L),(me=l.querySelector("[data-ls-close-overlay]"))==null||me.addEventListener("click",E=>{E.target===E.currentTarget&&L()});const fe=E=>{E.key==="Escape"&&(L(),document.removeEventListener("keydown",fe))};document.addEventListener("keydown",fe),l.querySelectorAll('[data-ls-action="submit"], [data-ls-submit]').forEach(E=>{E.addEventListener("click",ft=>{var _e;ft.preventDefault();const I={popup_id:e.id};let q=!1;l.querySelectorAll("input, select, textarea").forEach(p=>{const g=p.name||p.id;if(!g||p.type==="submit"||p.type==="button")return;const pt=g.toLowerCase().includes("email"),mt=g.toLowerCase().includes("phone")||g.toLowerCase().includes("tel")||g.toLowerCase().includes("whatsapp"),_t=g.toLowerCase().includes("name")||g.toLowerCase().includes("first")||g.toLowerCase().includes("last");pt&&p.value?(I.email=p.value.trim(),q=!0):mt&&p.value?(I.whatsapp=p.value.trim(),q=!0):_t&&p.value?(I.name=p.value.trim(),q=!0):p.value&&(I[g]=p.value.trim())}),q&&typeof window<"u"&&((_e=window.LeadSense)!=null&&_e.identify)&&window.LeadSense.identify(I),n("popup_cta_click",{popup_id:e.id}),n("popup_converted",{popup_id:e.id}),it(e,n,t),L()})}),n("popup_shown",{popup_id:e.id,popup_name:e.name,type:r})}function ce(){var e;(e=document.getElementById(se))==null||e.remove()}let m="",c=null,_=null,P=null,le=!1,w=[],ue=0,z=()=>0,$=!1;function d(...e){le&&console.log("[LeadSense]",...e)}function h(e,t){try{return e()}catch(n){d("Error in",t,n);return}}function f(e,t={}){if(Y()||!c)return;const n={event:e,visitor_id:c.visitor_id,session_id:c.session_id,token:m,timestamp:Date.now(),url:location.href,path:location.pathname,properties:t};d("Track:",e,t),Ie(n)}function y(e){var n;if(!c||!_||$||!w.length)return;const t={trigger:e,session:_,profile:c,scrollDepth:ue,timeOnPage:z()};for(const o of w){const i=((n=o.config.frequency)==null?void 0:n.show_once_per)||"session";if(!nt(o.id,i,c.session_id)){d("Popup bloqueado por frequência:",o.name);continue}if(Qe(o,t)){$=!0,ot(o.id,c.session_id),ae(o,c,f,()=>{setTimeout(()=>{$=!1},2e3)}),d("Popup exibido:",o.name);break}}}function ut(e){if(!c)return;c.lead={name:e.name||c.lead.name,email:e.email||c.lead.email,whatsapp:e.whatsapp||c.lead.whatsapp},c.identified=!0,j(c),f("lead_identified",{...e});const t={token:m,visitor_id:c.visitor_id,session_id:c.session_id,lead:c.lead,...e};fetch("https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/identify-lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(t),keepalive:!0}).catch(n=>d("Failed to identify-lead",n)),P==null||P(c.lead)}function dt(){var n;const e=((n=window.LeadSense)==null?void 0:n._queue)||[],t={_token:m,_queue:[],_ready:!1,track:f,identify:ut,showPopup:o=>{const i=w.find(s=>s.id===o);i&&c&&ae(i,c,f,()=>{$=!1})},isIdentified:()=>(c==null?void 0:c.identified)??!1,getProfile:()=>c,optOut:()=>{G(),D(),d("Opt-out ativado")},optIn:()=>{ye(),localStorage.setItem("_ls_optin","1"),d("Opt-in ativado"),Z()},onIdentify:o=>{P=o}};return e.forEach(o=>{if(Array.isArray(o)){const[i,...s]=o;i==="identify"?t.identify(s[0]):i==="track"&&t.track(s[0],s[1])}}),t}async function de(){var s;const e=document.currentScript;if(m=(e==null?void 0:e.getAttribute("data-token"))||((s=window.LeadSense)==null?void 0:s._token)||"",!m){console.warn("[LeadSense] Token não encontrado. Adicione data-token ao script.");return}if(((e==null?void 0:e.getAttribute("data-privacy"))||"standard")==="strict"&&!Y()&&localStorage.getItem("_ls_optin")!=="1"&&(d("Modo de privacidade Strict: Iniciando em opt-out. Aguardando LeadSense.optIn()."),G()),Y()){d("Opt-out ativo. Nenhum dado coletado.");return}if(/bot|crawler|spider|prerender/i.test(navigator.userAgent)){d("Bot — modo silencioso.");return}le=new URLSearchParams(location.search).has("ls_debug"),d("Inicializando... Token:",m.slice(0,8)+"...");const{profile:n}=Z();c=n,window.LeadSense=dt(),window.LeadSense._ready=!0,h(()=>{const r=Q();_=r,f("page_view",{title:r.title,referrer:r.referrer,utm_source:r.utm_source,utm_medium:r.utm_medium,utm_campaign:r.utm_campaign,device_type:r.device_type,os:r.os,browser:r.browser}),Me(m).then(a=>{a?(_&&(_.country=a.country,_.state=a.state,_.city=a.city,_.is_bot=a.is_bot),a.is_bot?(d("Bot detectado via IP — desativando popups."),w=[]):y({type:"page_view"})):y({type:"page_view"})})},"collectSession");let o=()=>0;h(()=>{const{cleanup:r,getMaxScroll:a}=$e((l,v)=>{l==="scroll_depth"&&(ue=v.depth),f(l,v),y({type:"scroll_depth",depth:v.depth})});o=a,window.addEventListener("beforeunload",r,{once:!0})},"scroll"),h(()=>He(f),"clicks");const{getElapsed:i}=Ye((r,a)=>{f(r,a),r==="time_on_page"&&y({type:"time_on_page",seconds:a.seconds}),r==="idle"&&y({type:"idle"})});z=i,h(()=>Ve(f),"forms"),h(()=>Be(f,i,y),"exit-intent"),h(()=>We(f,()=>{ke(),te(m).then(r=>{w=r.popups.filter(a=>a.status.toLowerCase()==="active"),_=Q(),y({type:"page_view"})})}),"spa"),window.addEventListener("beforeunload",()=>{f("page_leave",{time_on_page:z(),scroll_percentage:o()})},{once:!0}),Ne(),h(async()=>{w=(await te(m)).popups.filter(a=>a.status.toLowerCase()==="active"),d("Config carregada:",w.length,"popups ativos")},"fetchConfig"),d("✅ Tracker pronto. visitor_id:",c.visitor_id)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>h(()=>de(),"init")):h(()=>de(),"init")})();
+  `;
+        function scheduleClose() {
+            track('popup_closed', { popup_id: popup.id });
+            closeActivePopup();
+            onClose();
+        }
+        (_a = shadow.querySelector('[data-ls-close]')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', scheduleClose);
+        (_b = shadow.querySelector('[data-ls-close-overlay]')) === null || _b === void 0 ? void 0 : _b.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget)
+                scheduleClose();
+        });
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                scheduleClose();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+        shadow.querySelectorAll('[data-ls-action="submit"], [data-ls-submit]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                var _a;
+                e.preventDefault();
+                const leadData = { popup_id: popup.id };
+                let hasData = false;
+                shadow.querySelectorAll('input, select, textarea').forEach(input => {
+                    const name = input.name || input.id;
+                    if (!name || input.type === 'submit' || input.type === 'button')
+                        return;
+                    const isEmail = name.toLowerCase().includes('email');
+                    const isPhone = name.toLowerCase().includes('phone') || name.toLowerCase().includes('tel') || name.toLowerCase().includes('whatsapp');
+                    const isName = name.toLowerCase().includes('name') || name.toLowerCase().includes('first') || name.toLowerCase().includes('last');
+                    if (isEmail && input.value) {
+                        leadData.email = input.value.trim();
+                        hasData = true;
+                    }
+                    else if (isPhone && input.value) {
+                        leadData.whatsapp = input.value.trim();
+                        hasData = true;
+                    }
+                    else if (isName && input.value) {
+                        leadData.name = input.value.trim();
+                        hasData = true;
+                    }
+                    else if (input.value) {
+                        leadData[name] = input.value.trim();
+                    }
+                });
+                if (hasData && typeof window !== 'undefined' && ((_a = window.LeadSense) === null || _a === void 0 ? void 0 : _a.identify)) {
+                    window.LeadSense.identify(leadData);
+                }
+                track('popup_cta_click', { popup_id: popup.id });
+                track('popup_converted', { popup_id: popup.id });
+                executeActions(popup, track, profile);
+                scheduleClose();
+            });
+        });
+        track('popup_shown', { popup_id: popup.id, popup_name: popup.name, type });
+    }
+    function closeActivePopup() {
+        var _a;
+        (_a = document.getElementById(HOST_ID)) === null || _a === void 0 ? void 0 : _a.remove();
+    }
+
+    let token = '';
+    let profile = null;
+    let sessionData = null;
+    let onIdentifyCallback = null;
+    let isDebug = false;
+    let activePopups = [];
+    let scrollDepth = 0;
+    let getElapsedFn = () => 0;
+    let popupLocked = false;
+    function log(...args) {
+        if (isDebug)
+            console.log('[LeadSense]', ...args);
+    }
+    function safe(fn, context) {
+        try {
+            return fn();
+        }
+        catch (e) {
+            log('Error in', context, e);
+            return undefined;
+        }
+    }
+    function track(event, props = {}) {
+        if (isOptedOut() || !profile)
+            return;
+        const lsEvent = {
+            event,
+            visitor_id: profile.visitor_id,
+            session_id: profile.session_id,
+            token,
+            timestamp: Date.now(),
+            url: location.href,
+            path: location.pathname,
+            properties: props,
+        };
+        log('Track:', event, props);
+        enqueue(lsEvent);
+    }
+    function evaluateTriggers(triggerEvent) {
+        var _a;
+        if (!profile || !sessionData || popupLocked)
+            return;
+        if (!activePopups.length)
+            return;
+        const ctx = {
+            triggerType: triggerEvent.type,
+            session: sessionData,
+            profile,
+            scrollDepth,
+            timeOnPage: getElapsedFn(),
+        };
+        for (const popup of activePopups) {
+            const freqRule = ((_a = popup.trigger_config) === null || _a === void 0 ? void 0 : _a.frequency) || 'session';
+            if (!canShow(popup.id, freqRule, profile.session_id)) {
+                log('Popup bloqueado por frequência:', popup.name);
+                continue;
+            }
+            if (shouldShowPopup(popup, ctx)) {
+                popupLocked = true;
+                markShown(popup.id, profile.session_id);
+                renderPopup(popup, profile, track, () => {
+                    setTimeout(() => { popupLocked = false; }, 2000);
+                });
+                log('Popup exibido:', popup.name);
+                break;
+            }
+        }
+    }
+    function identify(data) {
+        if (!profile)
+            return;
+        profile.lead = {
+            name: data.name || profile.lead.name,
+            email: data.email || profile.lead.email,
+            whatsapp: data.whatsapp || profile.lead.whatsapp,
+        };
+        profile.identified = true;
+        saveProfile(profile);
+        track('lead_identified', Object.assign({}, data));
+        const payload = Object.assign({ token, visitor_id: profile.visitor_id, session_id: profile.session_id, lead: profile.lead }, data);
+        fetch('https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/identify-lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true,
+        }).catch(err => log('Failed to identify-lead', err));
+        onIdentifyCallback === null || onIdentifyCallback === void 0 ? void 0 : onIdentifyCallback(profile.lead);
+    }
+    function buildSDK() {
+        var _a;
+        const preQueue = (((_a = window.LeadSense) === null || _a === void 0 ? void 0 : _a._queue) || []);
+        const sdk = {
+            _token: token,
+            _queue: [],
+            _ready: false,
+            track,
+            identify,
+            showPopup: (id) => {
+                const popup = activePopups.find(p => p.id === id);
+                if (popup && profile) {
+                    renderPopup(popup, profile, track, () => { popupLocked = false; });
+                }
+            },
+            isIdentified: () => { var _a; return (_a = profile === null || profile === void 0 ? void 0 : profile.identified) !== null && _a !== void 0 ? _a : false; },
+            getProfile: () => profile,
+            optOut: () => { setOptOut(); flush(); log('Opt-out ativado'); },
+            optIn: () => { clearOptOut(); localStorage.setItem('_ls_optin', '1'); log('Opt-in ativado'); initIdentity(); },
+            onIdentify: (cb) => { onIdentifyCallback = cb; },
+        };
+        preQueue.forEach(args => {
+            if (Array.isArray(args)) {
+                const [method, ...rest] = args;
+                if (method === 'identify')
+                    sdk.identify(rest[0]);
+                else if (method === 'track')
+                    sdk.track(rest[0], rest[1]);
+            }
+        });
+        return sdk;
+    }
+    async function init() {
+        var _a;
+        const scriptEl = (document.currentScript || document.querySelector('script[src*="tracker.js"]'));
+        token = (scriptEl === null || scriptEl === void 0 ? void 0 : scriptEl.getAttribute('data-token')) || ((_a = window.LeadSense) === null || _a === void 0 ? void 0 : _a._token) || '';
+        if (!token) {
+            console.warn('[LeadSense] Token não encontrado. Adicione data-token ao script.');
+            return;
+        }
+        const privacyMode = (scriptEl === null || scriptEl === void 0 ? void 0 : scriptEl.getAttribute('data-privacy')) || 'standard';
+        if (privacyMode === 'strict' && !isOptedOut() && localStorage.getItem('_ls_optin') !== '1') {
+            log('Modo de privacidade Strict: Iniciando em opt-out. Aguardando LeadSense.optIn().');
+            setOptOut();
+        }
+        if (isOptedOut()) {
+            log('Opt-out ativo. Nenhum dado coletado.');
+            return;
+        }
+        if (/bot|crawler|spider|prerender/i.test(navigator.userAgent)) {
+            log('Bot — modo silencioso.');
+            return;
+        }
+        isDebug = new URLSearchParams(location.search).has('ls_debug');
+        log('Inicializando... Token:', token.slice(0, 8) + '...');
+        const { profile: p } = initIdentity();
+        profile = p;
+        window.LeadSense = buildSDK();
+        window.LeadSense._ready = true;
+        safe(() => {
+            const session = collectSession();
+            sessionData = session;
+            track('page_view', {
+                title: session.title,
+                referrer: session.referrer,
+                utm_source: session.utm_source,
+                utm_medium: session.utm_medium,
+                utm_campaign: session.utm_campaign,
+                device_type: session.device_type,
+                os: session.os,
+                browser: session.browser,
+            });
+            fetchIpEnrichment(token).then((ipData) => {
+                if (ipData) {
+                    if (sessionData) {
+                        sessionData.country = ipData.country;
+                        sessionData.state = ipData.state;
+                        sessionData.city = ipData.city;
+                        sessionData.is_bot = ipData.is_bot;
+                    }
+                    if (ipData.is_bot) {
+                        log('Bot detectado via IP — desativando popups.');
+                        activePopups = [];
+                    }
+                    else {
+                        evaluateTriggers({ type: 'page_view' });
+                    }
+                }
+                else {
+                    evaluateTriggers({ type: 'page_view' });
+                }
+            });
+        }, 'collectSession');
+        let getMaxScrollFn = () => 0;
+        safe(() => {
+            const { cleanup, getMaxScroll } = initScrollCollector((evt, props) => {
+                if (evt === 'scroll_depth')
+                    scrollDepth = props.depth;
+                track(evt, props);
+                evaluateTriggers({ type: 'scroll_depth', depth: props.depth });
+            });
+            getMaxScrollFn = getMaxScroll;
+            window.addEventListener('beforeunload', cleanup, { once: true });
+        }, 'scroll');
+        safe(() => initClickCollector(track), 'clicks');
+        const { getElapsed } = initTimeCollector((evt, props) => {
+            track(evt, props);
+            if (evt === 'time_on_page')
+                evaluateTriggers({ type: 'time_on_page', seconds: props.seconds });
+            if (evt === 'idle')
+                evaluateTriggers({ type: 'idle' });
+        });
+        getElapsedFn = getElapsed;
+        safe(() => initFormCollector(track), 'forms');
+        safe(() => initExitIntentCollector(track, getElapsed, evaluateTriggers), 'exit-intent');
+        safe(() => initSpaCollector(track, () => {
+            invalidateConfig();
+            fetchConfig(token).then(cfg => {
+                activePopups = cfg.popups.filter(p => p.status.toLowerCase() === 'active');
+                sessionData = collectSession();
+                evaluateTriggers({ type: 'page_view' });
+            });
+        }), 'spa');
+        window.addEventListener('beforeunload', () => {
+            track('page_leave', {
+                time_on_page: getElapsedFn(),
+                scroll_percentage: getMaxScrollFn(),
+            });
+        }, { once: true });
+        setupBeforeUnloadFlush();
+        safe(async () => {
+            const cfg = await fetchConfig(token);
+            activePopups = cfg.popups.filter(p => p.status.toLowerCase() === 'active');
+            log('Config carregada:', activePopups.length, 'popups ativos');
+        }, 'fetchConfig');
+        log('✅ Tracker pronto. visitor_id:', profile.visitor_id);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => safe(() => init(), 'init'));
+    }
+    else {
+        safe(() => init(), 'init');
+    }
+
+})();
