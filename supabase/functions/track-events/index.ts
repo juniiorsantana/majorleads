@@ -213,7 +213,10 @@ serve(async (req) => {
             .from('events')
             .insert(validRows)
 
-        if (insertError) throw insertError
+        if (insertError) {
+            console.error("[PostgREST Insert Error]:", JSON.stringify(insertError, null, 2))
+            throw new Error(`Database error: ${insertError.message || JSON.stringify(insertError)}`)
+        }
 
         return new Response(JSON.stringify({ success: true, count: validRows.length }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
