@@ -5,10 +5,10 @@
  * Avalia triggers e conditions de um popup contra o estado atual da sessão.
  */
 
-import { Popup, PopupTrigger, PopupCondition, SessionData, LeadProfile } from '../core/types';
+import { Popup, TriggerConfig, SessionData, LeadProfile } from '../core/types';
 
 interface EvalContext {
-    trigger: Record<string, unknown>;
+    triggerType: string;
     session: SessionData;
     profile: LeadProfile;
     scrollDepth: number;
@@ -16,91 +16,95 @@ interface EvalContext {
 }
 
 // ─── Triggers ────────────────────────────────────────────────────
-function evalTrigger(trigger: PopupTrigger, ctx: EvalContext): boolean {
-    const { type, value } = trigger;
-    const evtType = ctx.trigger.type as string;
+function evalTriggerType(config: TriggerConfig, ctx: EvalContext): boolean {
+    const { type, value } = config;
+    const evtType = ctx.triggerType;
 
     switch (type) {
         case 'exit_intent':
             return evtType === 'exit_intent' || evtType === 'back_button' || evtType === 'tab_hidden';
-
         case 'time_on_page':
             return ctx.timeOnPage >= (value || 0);
-
         case 'scroll_depth':
             return ctx.scrollDepth >= (value || 0);
-
-        case 'page_load':
-            return evtType === 'page_view';
-
-        case 'idle':
+        case 'inactivity':
             return evtType === 'idle';
-
-        case 'tab_hidden':
-            return evtType === 'tab_hidden';
-
         default:
             return false;
     }
 }
 
-// ─── Conditions ──────────────────────────────────────────────────
-function compare(actual: unknown, operator: string, expected: unknown): boolean {
-    switch (operator) {
-        case 'equals': return String(actual) === String(expected);
-        case 'not_equals': return String(actual) !== String(expected);
-        case 'contains': return String(actual).includes(String(expected));
-        case 'not_contains': return !String(actual).includes(String(expected));
-        case 'starts_with': return String(actual).startsWith(String(expected));
-        case 'gte': return Number(actual) >= Number(expected);
-        case 'lte': return Number(actual) <= Number(expected);
-        case 'gt': return Number(actual) > Number(expected);
-        case 'lt': return Number(actual) < Number(expected);
-        case 'is_set': return actual !== null && actual !== undefined && actual !== '';
-        case 'is_not_set': return actual === null || actual === undefined || actual === '';
-        default: return false;
+// ─── Conditions Evaluation (Targeting & URL Rules) ───────────────
+function evalTargetAudience(config: TriggerConfig, ctx: EvalContext): boolean {
+    const { device, visitorType } = config.targetAudience;
+
+    // Check device match
+    if (device !== 'all') {
+        const isMobile = ctx.session.screen_width < 768; // simple responsive check, could use session.device_type too
+        if (device === 'mobile' && !isMobile) return false;
+        if (device === 'desktop' && isMobile) return false;
     }
+
+    // Check visitor type match
+    if (visitorType !== 'all') {
+        const isReturning = ctx.profile.is_returning;
+        if (visitorType === 'new' && isReturning) return false;
+        if (visitorType === 'returning' && !isReturning) return false;
+    }
+
+    return true;
 }
 
-function evalCondition(condition: PopupCondition, ctx: EvalContext): boolean {
-    const { type, operator, value } = condition;
-    const { session, profile } = ctx;
+function evalUrlRules(config: TriggerConfig, ctx: EvalContext): boolean {
+    const { urlRules } = config;
+    if (!urlRules || urlRules.length === 0) return true; // Default to allow if no rules
 
-    switch (type) {
-        case 'utm_source': return compare(session.utm_source, operator, value);
-        case 'utm_medium': return compare(session.utm_medium, operator, value);
-        case 'utm_campaign': return compare(session.utm_campaign, operator, value);
+    const currentUrl = ctx.session.url || '';
+    const currentPath = ctx.session.path || '';
 
-        case 'referrer': return compare(session.referrer_domain, operator, value);
-        case 'referrer_domain': return compare(session.referrer_domain, operator, value);
+    // Logic: If there are URL rules, it must satisfy ALL condition blocks (AND logic for now based on previous engine)
+    // Wait, typical popup builders use OR logic between URL rules if it's "Show on". We'll treat the array as OR.
+    // Meaning: If ANY rule matches, we show it.
 
-        case 'url': return compare(session.url, operator, value);
-        case 'path': return compare(session.path, operator, value);
+    for (const rule of urlRules) {
+        let matches = false;
+        const target = rule.value.toLowerCase();
+        const urlLower = currentUrl.toLowerCase();
+        const pathLower = currentPath.toLowerCase();
 
-        case 'device_type': return compare(session.device_type, operator, value);
-        case 'browser': return compare(session.browser, operator, value);
-        case 'language': return compare(session.language, operator, value);
+        switch (rule.condition) {
+            case 'equals':
+                matches = urlLower === target || pathLower === target || pathLower === `/${target}`;
+                break;
+            case 'contains':
+                matches = urlLower.includes(target);
+                break;
+            case 'starts_with':
+                matches = pathLower.startsWith(target.startsWith('/') ? target : `/${target}`);
+                break;
+        }
 
-        case 'session_count': return compare(profile.session_count, operator, value);
-        case 'is_returning': return compare(profile.is_returning, operator, value);
-        case 'is_identified': return compare(profile.identified, operator, value);
-
-        case 'scroll_depth': return compare(ctx.scrollDepth, operator, value);
-        case 'time_on_page': return compare(ctx.timeOnPage, operator, value);
-
-        default: return true; // condição desconhecida = não bloqueia
+        if (matches) return true;
     }
+
+    // If there were rules but none matched, do not show
+    return false;
 }
 
 // ─── Evaluator Principal ─────────────────────────────────────────
 export function shouldShowPopup(popup: Popup, ctx: EvalContext): boolean {
-    const { triggers, conditions } = popup.config;
+    const config = popup.trigger_config;
 
-    // Pelo menos um trigger deve ser satisfeito
-    const triggerMet = triggers.length === 0 || triggers.some(t => evalTrigger(t, ctx));
-    if (!triggerMet) return false;
+    if (!config) return false;
 
-    // Todas as conditions devem ser satisfeitas (AND)
-    const conditionsMet = conditions.every(c => evalCondition(c, ctx));
-    return conditionsMet;
+    // Deve satisfazer o tipo de trigger + valor (ex: scroll 50%)
+    if (!evalTriggerType(config, ctx)) return false;
+
+    // Restrições de audiência
+    if (!evalTargetAudience(config, ctx)) return false;
+
+    // Regras de URL
+    if (!evalUrlRules(config, ctx)) return false;
+
+    return true;
 }

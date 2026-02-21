@@ -73,7 +73,7 @@ function sanitizeHTML(html: string): string {
 }
 
 // ─── Animações ────────────────────────────────────────────────────
-function getAnimationCSS(animation: string, type: string): string {
+function getAnimationCSS(type: string): string {
   const base = `
     @keyframes ls-fade-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes ls-slide-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
@@ -81,47 +81,121 @@ function getAnimationCSS(animation: string, type: string): string {
     @keyframes ls-slide-right { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
   `;
 
-  const anim = animation === 'fade' ? 'ls-fade-in'
-    : type === 'top_bar' ? 'ls-slide-down'
-      : type === 'slide_in' ? 'ls-slide-right'
+  const anim = type === 'modal' ? 'ls-fade-in'
+    : type === 'top-bar' ? 'ls-slide-down'
+      : type === 'slide-in' ? 'ls-slide-right'
         : 'ls-slide-up';
 
   return `${base}\n.__ls-popup-inner { animation: ${anim} 0.35s ease forwards; }`;
 }
 
-// ─── Wrapper de Layout ────────────────────────────────────────────
-function buildWrapper(popup: Popup): string {
-  const { type, position } = popup.config.template;
+// ─── CSS Helper ───────────────────────────────────────────────────
+function toInlineStyle(props: Record<string, any>, isContainer = false): string {
+  // Converte camelCase props (como fontSize, backgroundColor) para dash-case CSS inline style
+  const styleString = Object.entries(props)
+    .filter(([k, v]) => v !== undefined && v !== '' && !['text', 'src', 'alt', 'placeholder', 'fieldType', 'name', 'required'].includes(k))
+    .map(([k, v]) => {
+      let cssKey = k.replace(/([A-Z])/g, "-$1").toLowerCase();
+      let cssVal = v;
+      if (typeof v === 'number' && !['opacity', 'zIndex', 'fontWeight', 'lineHeight'].includes(k)) {
+        cssVal = `${v}px`;
+      }
+      return `${cssKey}: ${cssVal}`;
+    })
+    .join('; ');
 
-  const posMap: Record<string, string> = {
-    center: 'align-items: center; justify-content: center;',
-    top: 'align-items: flex-start; justify-content: center; padding-top: 40px;',
-    bottom: 'align-items: flex-end; justify-content: center; padding-bottom: 40px;',
-    'bottom-right': 'align-items: flex-end; justify-content: flex-end; padding: 20px;',
-    'bottom-left': 'align-items: flex-end; justify-content: flex-start; padding: 20px;',
-  };
+  if (!isContainer) return styleString;
 
-  const flexPos = posMap[position] || posMap['center'];
+  // Add default container styles for flex/stack layouts typically used in headings/texts
+  return `${styleString}; max-width: 100%; word-break: break-word;`;
+}
 
-  if (type === 'top_bar') {
-    return `<div class="__ls-popup-overlay" style="
-      position: fixed; top: 0; left: 0; right: 0; z-index: 2147483640;
-      display: flex; flex-direction: column; pointer-events: none;
-    ">`;
+// ─── Layer Generator ──────────────────────────────────────────────
+function generateLayerHTML(layer: any, profile: LeadProfile): string {
+  const { type, props = {} } = layer;
+  let html = '';
+
+  switch (type) {
+    case 'heading':
+    case 'text': {
+      const tag = type === 'heading' ? 'h2' : 'p';
+      const text = interpolate(props.text || '', profile);
+      const style = toInlineStyle({ ...props, marginBottom: 12 }, true);
+      html = `<${tag} style="margin: 0; ${style}">${text}</${tag}>`;
+      break;
+    }
+    case 'hero_image':
+    case 'avatar_image': {
+      const src = props.src || '';
+      const alt = props.alt || '';
+      const defaultAvatarStyle = type === 'avatar_image' ? { borderRadius: '50%', objectFit: 'cover' as const, width: 64, height: 64 } : { maxWidth: '100%', objectFit: 'cover' as const, borderRadius: 8 };
+      const style = toInlineStyle({ ...defaultAvatarStyle, ...props, marginBottom: 16 }, true);
+      html = `<img src="${src}" alt="${alt}" style="${style}" />`;
+      break;
+    }
+    case 'button': {
+      const text = interpolate(props.text || 'Submit', profile);
+      const style = toInlineStyle({
+        padding: '12px 24px',
+        border: 'none',
+        cursor: 'pointer',
+        width: '100%',
+        fontWeight: 'bold',
+        transition: 'opacity 0.2s',
+        ...props
+      });
+      html = `<button data-ls-submit style="${style}">${text}</button>`;
+      break;
+    }
+    case 'input_field': {
+      const placeholder = interpolate(props.placeholder || '', profile);
+      const fieldType = props.fieldType || 'text';
+      const name = props.name || fieldType;
+      const required = props.required ? 'required' : '';
+      const style = toInlineStyle({
+        padding: '12px',
+        border: '1px solid #e5e7eb',
+        borderRadius: 6,
+        width: '100%',
+        marginBottom: 12,
+        outline: 'none',
+        ...props
+      });
+      html = `<input type="${fieldType}" name="${name}" placeholder="${placeholder}" ${required} style="${style}" />`;
+      break;
+    }
+    default:
+      console.warn('Unknown layer type:', type);
   }
 
-  if (type === 'toast' || type === 'slide_in') {
-    return `<div class="__ls-popup-overlay" style="
-      position: fixed; inset: 0; z-index: 2147483640; pointer-events: none;
-      display: flex; ${flexPos}
-    ">`;
+  return html;
+}
+
+// ─── Wrapper de Layout ────────────────────────────────────────────
+function buildWrapper(popup: Popup): string {
+  const { type } = popup;
+
+  const baseOverlay = `position: fixed; inset: 0; z-index: 2147483640; display: flex; box-sizing: border-box;`;
+
+  if (type === 'top-bar') {
+    return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: flex-start; pointer-events: none; bottom: auto;">`;
+  }
+
+  if (type === 'toast' || type === 'slide-in') {
+    return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: flex-end; justify-content: flex-end; padding: 20px; pointer-events: none;">`;
   }
 
   // modal com overlay
-  return `<div class="__ls-popup-overlay" style="
-    position: fixed; inset: 0; z-index: 2147483640;
-    background: rgba(0,0,0,0.5); display: flex; ${flexPos}
-  " data-ls-close-overlay>`;
+  return `<div class="__ls-popup-overlay" style="${baseOverlay} align-items: center; justify-content: center; background: rgba(0,0,0,0.5); padding: 16px;" data-ls-close-overlay>`;
+}
+
+// ─── Base Content Container Style ────────────────────────────────
+function getContainerStyle(type: string): string {
+  const base = `background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 24px; position: relative; pointer-events: auto; display: flex; flex-direction: column; width: 100%;`;
+  if (type === 'top-bar') return `background: white; width: 100%; padding: 12px 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 16px;`;
+  if (type === 'toast' || type === 'slide-in') return `${base} max-width: 360px;`;
+  // Modal default
+  return `${base} max-width: 450px;`;
 }
 
 // ─── Botão de Fechar ──────────────────────────────────────────────
@@ -129,7 +203,7 @@ const CLOSE_BTN_HTML = `
 <button data-ls-close style="
   position: absolute; top: 12px; right: 12px;
   background: none; border: none; cursor: pointer;
-  color: inherit; font-size: 20px; line-height: 1;
+  color: #71717a; font-size: 20px; line-height: 1;
   opacity: 0.7; padding: 4px;
 " aria-label="Fechar">✕</button>
 `;
@@ -139,7 +213,7 @@ export function renderPopup(popup: Popup, profile: LeadProfile, track: TrackFn, 
   // Remove popup anterior se existir
   closeActivePopup();
 
-  const { content, animation, type } = popup.config.template;
+  const { type, layers = [] } = popup;
 
   // Cria host element
   const host = document.createElement('div');
@@ -156,27 +230,22 @@ export function renderPopup(popup: Popup, profile: LeadProfile, track: TrackFn, 
   }
 
   const css = `
-    ${getAnimationCSS(animation, type)}
-    .__ls-popup-inner {
-      position: relative;
-      max-width: 95vw;
-      pointer-events: auto;
-      box-sizing: border-box;
-    }
-    .__ls-popup-inner * { box-sizing: border-box; }
-    ${content.css || ''}
+    ${getAnimationCSS(type)}
+    .__ls-popup-inner * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    .__ls-popup-inner input::placeholder { color: #a1a1aa; }
+    .__ls-popup-inner button:hover { opacity: 0.9; }
   `;
 
-  const rawHtml = interpolate(content.html, profile);
-  const html = sanitizeHTML(rawHtml);
+  const contentHtml = layers.map(layer => generateLayerHTML(layer, profile)).join('');
   const wrapper = buildWrapper(popup);
+  const containerStyle = getContainerStyle(type);
 
   shadow.innerHTML = `
     <style>${css}</style>
     ${wrapper}
-      <div class="__ls-popup-inner">
-        ${CLOSE_BTN_HTML}
-        ${html}
+      <div class="__ls-popup-inner" style="${containerStyle}">
+        ${type !== 'top-bar' ? CLOSE_BTN_HTML : ''}
+        ${type === 'top-bar' ? `<div style="display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 1200px;">${contentHtml}${CLOSE_BTN_HTML.replace('absolute; top: 12px; right: 12px;', 'relative; top: 0; right: 0;')}</div>` : contentHtml}
       </div>
     </div>
   `;

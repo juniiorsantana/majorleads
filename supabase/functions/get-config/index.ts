@@ -39,7 +39,7 @@ serve(async (req) => {
         // Fetch active popups for this site
         const { data: popups, error } = await supabase
             .from('popups')
-            .select('id, name, status, config')
+            .select('id, name, status, type, trigger_config, actions_config, layers')
             .eq('site_id', site.id)
             .in('status', ['Active', 'active'])
 

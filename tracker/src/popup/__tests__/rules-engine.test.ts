@@ -20,8 +20,7 @@ describe('Popup Rules Engine', () => {
         language: 'pt-BR',
         screen_width: 1920,
         screen_height: 1080,
-        connection_type: '4g',
-    };
+    } as any;
 
     const defaultProfile: LeadProfile = {
         visitor_id: 'v1',
@@ -31,113 +30,106 @@ describe('Popup Rules Engine', () => {
         first_seen: Date.now().toString(),
         last_seen: Date.now().toString(),
         identified: false,
-        lead: { name: '', email: '', whatsapp: '' },
-        events: []
+        lead: { name: '', email: '', whatsapp: '' }
     };
 
     const createCtx = (triggerType: string, overrides?: Record<string, unknown>) => ({
-        trigger: { type: triggerType, ...overrides },
-        session: defaultSession,
+        triggerType,
+        session: { ...defaultSession, ...overrides },
         profile: defaultProfile,
         scrollDepth: 0,
         timeOnPage: 0,
     });
 
-    const createPopup = (triggers: any[] = [], conditions: any[] = []): Popup => ({
+    const createPopup = (configOverrides: any = {}): Popup => ({
         id: 'p1',
         name: 'Test Popup',
         status: 'active',
-        config: {
-            triggers,
-            conditions,
-            template: { type: 'modal', position: 'center', animation: 'fade', content: { html: '', css: '' } },
-            frequency: { show_once_per: 'session' }
+        type: 'modal',
+        layers: [],
+        actions_config: { type: 'close' },
+        trigger_config: {
+            type: 'time_on_page',
+            value: 10,
+            frequency: 'session',
+            targetAudience: { device: 'all', visitorType: 'all' },
+            urlRules: [],
+            ...configOverrides
         }
     });
 
-    describe('Triggers', () => {
-        it('should show if no triggers are defined', () => {
-            const popup = createPopup();
-            expect(shouldShowPopup(popup, createCtx('page_view'))).toBe(true);
-        });
-
-        it('should trigger on time_on_page', () => {
-            const popup = createPopup([{ type: 'time_on_page', value: 30 }]);
+    describe('Triggers Type & Value', () => {
+        it('should trigger on time_on_page properly', () => {
+            const popup = createPopup({ type: 'time_on_page', value: 30 });
 
             // Not enough time
             expect(shouldShowPopup(popup, { ...createCtx('time_on_page'), timeOnPage: 10 })).toBe(false);
 
             // Enough time
             expect(shouldShowPopup(popup, { ...createCtx('time_on_page'), timeOnPage: 30 })).toBe(true);
-            expect(shouldShowPopup(popup, { ...createCtx('time_on_page'), timeOnPage: 35 })).toBe(true);
         });
 
         it('should trigger on exit_intent', () => {
-            const popup = createPopup([{ type: 'exit_intent' }]);
+            const popup = createPopup({ type: 'exit_intent' });
 
             expect(shouldShowPopup(popup, createCtx('exit_intent'))).toBe(true);
             expect(shouldShowPopup(popup, createCtx('mouse_move'))).toBe(false);
         });
 
         it('should trigger on scroll_depth', () => {
-            const popup = createPopup([{ type: 'scroll_depth', value: 50 }]);
+            const popup = createPopup({ type: 'scroll_depth', value: 50 });
 
             expect(shouldShowPopup(popup, { ...createCtx('scroll_depth'), scrollDepth: 25 })).toBe(false);
             expect(shouldShowPopup(popup, { ...createCtx('scroll_depth'), scrollDepth: 50 })).toBe(true);
         });
     });
 
-    describe('Conditions', () => {
-        it('should block if utm_source does not match', () => {
-            const popup = createPopup([], [{ type: 'utm_source', operator: 'equals', value: 'facebook' }]);
+    describe('Target Audience', () => {
+        it('should block if device does not match', () => {
+            const popup = createPopup({ targetAudience: { device: 'mobile', visitorType: 'all' } });
 
-            const ctxFail = createCtx('page_view');
-            ctxFail.session = { ...defaultSession, utm_source: 'google' };
-            expect(shouldShowPopup(popup, ctxFail)).toBe(false);
+            // Desktop viewport fails
+            expect(shouldShowPopup(popup, createCtx('time_on_page', { screen_width: 1920 }))).toBe(false);
 
-            const ctxPass = createCtx('page_view');
-            ctxPass.session = { ...defaultSession, utm_source: 'facebook' };
-            expect(shouldShowPopup(popup, ctxPass)).toBe(true);
+            // Mobile viewport passes
+            expect(shouldShowPopup(popup, createCtx('time_on_page', { screen_width: 375 }))).toBe(true);
         });
 
-        it('should allow containing URLs', () => {
-            const popup = createPopup([], [{ type: 'url', operator: 'contains', value: '/checkout' }]);
+        it('should block if visitor type does not match', () => {
+            const popup = createPopup({ targetAudience: { device: 'all', visitorType: 'returning' } });
 
-            const ctxFail = createCtx('page_view');
-            expect(shouldShowPopup(popup, ctxFail)).toBe(false); // /home
+            const ctxNew = createCtx('time_on_page');
+            ctxNew.profile = { ...defaultProfile, is_returning: false };
+            expect(shouldShowPopup(popup, ctxNew)).toBe(false);
 
-            const ctxPass = createCtx('page_view');
-            ctxPass.session = { ...defaultSession, url: 'https://example.com/checkout/step-1' };
-            expect(shouldShowPopup(popup, ctxPass)).toBe(true);
+            const ctxReturning = createCtx('time_on_page');
+            ctxReturning.profile = { ...defaultProfile, is_returning: true };
+            expect(shouldShowPopup(popup, ctxReturning)).toBe(true);
+        });
+    });
+
+    describe('URL Rules', () => {
+        it('should allow if no rules are defined', () => {
+            const popup = createPopup({ urlRules: [] });
+            expect(shouldShowPopup(popup, createCtx('time_on_page'))).toBe(true);
         });
 
-        it('should evaluate mathematical conditions (gte, lte)', () => {
-            const popup = createPopup([], [{ type: 'session_count', operator: 'gte', value: 2 }]);
+        it('should match any rule (OR logic)', () => {
+            const popup = createPopup({
+                urlRules: [
+                    { id: '1', condition: 'contains', value: 'checkout' },
+                    { id: '2', condition: 'equals', value: '/pricing' }
+                ]
+            });
 
-            const ctxFail = createCtx('page_view');
-            ctxFail.profile = { ...defaultProfile, session_count: 1 };
-            expect(shouldShowPopup(popup, ctxFail)).toBe(false);
+            // Fails all
+            expect(shouldShowPopup(popup, createCtx('time_on_page', { url: 'https://site.com/home', path: '/home' }))).toBe(false);
 
-            const ctxPass = createCtx('page_view');
-            ctxPass.profile = { ...defaultProfile, session_count: 3 };
-            expect(shouldShowPopup(popup, ctxPass)).toBe(true);
-        });
+            // Matches first
+            expect(shouldShowPopup(popup, createCtx('time_on_page', { url: 'https://site.com/checkout/pay', path: '/checkout/pay' }))).toBe(true);
 
-        it('should block if any one condition fails (AND logic)', () => {
-            const popup = createPopup([], [
-                { type: 'device_type', operator: 'equals', value: 'desktop' },
-                { type: 'utm_source', operator: 'equals', value: 'tiktok' }
-            ]);
-
-            // Only desktop passes
-            const ctxPartial = createCtx('page_view');
-            ctxPartial.session = { ...defaultSession, device_type: 'desktop', utm_source: 'instagram' };
-            expect(shouldShowPopup(popup, ctxPartial)).toBe(false);
-
-            // Both pass
-            const ctxPass = createCtx('page_view');
-            ctxPass.session = { ...defaultSession, device_type: 'desktop', utm_source: 'tiktok' };
-            expect(shouldShowPopup(popup, ctxPass)).toBe(true);
+            // Matches second
+            expect(shouldShowPopup(popup, createCtx('time_on_page', { url: 'https://site.com/pricing', path: '/pricing' }))).toBe(true);
         });
     });
 });

@@ -69,7 +69,7 @@ function evaluateTriggers(triggerEvent: Record<string, unknown>): void {
     if (!activePopups.length) return;
 
     const ctx = {
-        trigger: triggerEvent,
+        triggerType: triggerEvent.type as string,
         session: sessionData,
         profile,
         scrollDepth,
@@ -77,7 +77,7 @@ function evaluateTriggers(triggerEvent: Record<string, unknown>): void {
     };
 
     for (const popup of activePopups) {
-        const freqRule = popup.config.frequency?.show_once_per || 'session';
+        const freqRule = (popup.trigger_config?.frequency as 'session' | 'always' | 'day' | 'week') || 'session';
         if (!canShow(popup.id, freqRule, profile.session_id)) {
             log('Popup bloqueado por frequência:', popup.name);
             continue;

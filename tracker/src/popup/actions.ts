@@ -10,60 +10,74 @@ import { Popup, LeadProfile } from '../core/types';
 type TrackFn = (event: string, props: Record<string, unknown>) => void;
 
 export function executeActions(popup: Popup, track: TrackFn, profile?: LeadProfile): void {
-    const { actions = [] } = popup.config;
+    const action = popup.actions_config;
+    if (!action) return;
 
-    for (const action of actions) {
-        switch (action.type) {
-            case 'redirect':
-                if (action.value) {
-                    track('popup_redirect', { popup_id: popup.id, url: action.value });
-                    window.location.href = action.value;
+    switch (action.type) {
+        case 'redirect':
+            if (action.redirect?.url) {
+                let finalUrl = action.redirect.url;
+
+                // Add UTMS if configured
+                const utms = action.redirect.utms;
+                if (utms && (utms.source || utms.medium || utms.campaign)) {
+                    const urlObj = new URL(finalUrl, window.location.origin);
+                    if (utms.source) urlObj.searchParams.set('utm_source', utms.source);
+                    if (utms.medium) urlObj.searchParams.set('utm_medium', utms.medium);
+                    if (utms.campaign) urlObj.searchParams.set('utm_campaign', utms.campaign);
+                    if (utms.term) urlObj.searchParams.set('utm_term', utms.term);
+                    if (utms.content) urlObj.searchParams.set('utm_content', utms.content);
+                    finalUrl = urlObj.toString();
                 }
-                break;
 
-            case 'open_tab':
-                if (action.value) {
-                    track('popup_open_tab', { popup_id: popup.id, url: action.value });
-                    window.open(action.value, '_blank', 'noopener noreferrer');
+                track('popup_redirect', { popup_id: popup.id, url: finalUrl });
+                if (action.redirect.openInNewTab) {
+                    window.open(finalUrl, '_blank', 'noopener noreferrer');
+                } else {
+                    window.location.href = finalUrl;
                 }
-                break;
+            }
+            break;
 
-            case 'whatsapp': {
-                const phone = action.value.replace(/\D/g, '');
-                const url = `https://wa.me/${phone}`;
+        case 'whatsapp': {
+            if (action.whatsapp?.number) {
+                const phone = action.whatsapp.number.replace(/\D/g, '');
+                let url = `https://wa.me/${phone}`;
+                if (action.whatsapp.message) {
+                    url += `?text=${encodeURIComponent(action.whatsapp.message)}`;
+                }
                 track('popup_whatsapp', { popup_id: popup.id, phone });
                 window.open(url, '_blank', 'noopener noreferrer');
-                break;
             }
-
-            case 'webhook':
-                if (action.value) {
-                    fetch(action.value, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            popup_id: popup.id,
-                            timestamp: Date.now(),
-                            lead: profile?.lead || null,
-                            visitor_id: profile?.visitor_id || null,
-                            session_id: profile?.session_id || null
-                        }),
-                        keepalive: true,
-                    }).catch(() => { /* silencia — não bloqueia UX */ });
-                    track('popup_webhook', { popup_id: popup.id, url: action.value });
-                }
-                break;
-
-            case 'scroll_to':
-                if (action.value) {
-                    const el = document.querySelector(action.value);
-                    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-                break;
-
-            case 'none':
-            default:
-                break;
+            break;
         }
+
+        case 'webhook':
+            if (action.webhook?.url) {
+                fetch(action.webhook.url, {
+                    method: action.webhook.method || 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        popup_id: popup.id,
+                        timestamp: Date.now(),
+                        lead: profile?.lead || null,
+                        visitor_id: profile?.visitor_id || null,
+                        session_id: profile?.session_id || null
+                    }),
+                    keepalive: true,
+                }).catch(() => { /* silencia — não bloqueia UX */ });
+                track('popup_webhook', { popup_id: popup.id, url: action.webhook.url });
+            }
+            break;
+
+        case 'success_message':
+            // The renderer handles showing the message visually if needed,
+            // we just track it here.
+            track('popup_success', { popup_id: popup.id });
+            break;
+
+        case 'close':
+        default:
+            break;
     }
 }

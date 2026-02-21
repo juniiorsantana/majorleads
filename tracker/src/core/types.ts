@@ -64,35 +64,55 @@ export interface LeadSenseEvent {
     properties: Record<string, unknown>;
 }
 
-export interface PopupTrigger {
-    type: string;
+export interface Layer {
+    id: string;
+    type: 'hero_image' | 'heading' | 'text' | 'button' | 'avatar_image' | 'input_field';
+    label: string;
+    props: Record<string, any>;
+}
+
+export interface TriggerConfig {
+    type: 'exit_intent' | 'time_on_page' | 'scroll_depth' | 'inactivity';
     value?: number;
-}
-
-export interface PopupCondition {
-    type: string;
-    operator: string;
-    value: unknown;
-}
-
-export interface PopupConfig {
-    triggers: PopupTrigger[];
-    conditions: PopupCondition[];
-    frequency: { show_once_per: 'session' | 'day' | 'week' | 'always' };
-    template: {
-        type: 'modal' | 'slide_in' | 'top_bar' | 'toast';
-        position: string;
-        animation: string;
-        content: { html: string; css: string };
+    frequency: 'session' | 'visitor' | 'always' | 'daily';
+    delay?: number;
+    targetAudience: {
+        device: 'all' | 'desktop' | 'mobile';
+        visitorType: 'all' | 'new' | 'returning';
     };
-    actions: Array<{ type: string; value: string }>;
+    urlRules: Array<{
+        id: string;
+        condition: 'contains' | 'equals' | 'starts_with';
+        value: string;
+    }>;
+}
+
+export interface ActionsConfig {
+    type: 'whatsapp' | 'redirect' | 'webhook' | 'success_message' | 'close';
+    whatsapp?: { number: string; message: string };
+    redirect?: {
+        url: string;
+        openInNewTab: boolean;
+        utms?: {
+            source: string;
+            medium: string;
+            campaign: string;
+            term?: string;
+            content?: string;
+        }
+    };
+    webhook?: { url: string; method: string };
+    successMessage?: { text: string; autoCloseDuration: number };
 }
 
 export interface Popup {
     id: string;
     name: string;
     status: string;
-    config: PopupConfig;
+    type: 'modal' | 'slide-in' | 'top-bar' | 'toast';
+    trigger_config: TriggerConfig;
+    actions_config: ActionsConfig;
+    layers: Layer[];
 }
 
 export interface RemoteConfig {
