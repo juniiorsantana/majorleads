@@ -156,6 +156,7 @@ serve(async (req) => {
 
         // 3. Validação de schema (Descarte de eventos inválidos isoladamente)
         const validRows: any[] = [];
+        const invalidEvents: any[] = [];
         for (const evt of events) {
             // Se vier com site_id hackeado no array, será ignorado/sobrescrito.
             const validation = EventSchema.safeParse(evt);
@@ -171,14 +172,15 @@ serve(async (req) => {
                     timestamp: new Date(evt.timestamp).toISOString(),
                 });
             } else {
+                invalidEvents.push({ event: evt, issues: validation.error.issues })
                 console.warn('[Validation Error] Discarding invalid event:', validation.error.issues);
             }
         }
 
         if (validRows.length === 0) {
-            return new Response(JSON.stringify({ success: true, count: 0, notice: "All events were discarded due to schema validation failure" }), {
+            return new Response(JSON.stringify({ success: false, error: "All events failed validation", invalidEvents }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200,
+                status: 400,
             })
         }
 
