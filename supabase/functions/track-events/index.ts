@@ -47,12 +47,15 @@ const EventSchema = z.object({
 });
 
 serve(async (req) => {
-    const corsResponse = handleCors(req)
-    if (corsResponse) return corsResponse
-
     try {
+        const corsResponse = handleCors(req)
+        if (corsResponse) return corsResponse
+
         if (req.method !== 'POST') {
-            return new Response('Method not allowed', { status: 405, headers: corsHeaders })
+            return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+                status: 405,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
         }
 
         const supabase = createClient(
@@ -91,12 +94,34 @@ serve(async (req) => {
         }
 
         // Parse Payload
-        const raw = await req.text()
+        let raw: string;
+        try {
+            raw = await req.text()
+            if (!raw) {
+                return new Response(JSON.stringify({ error: 'Empty request body' }), {
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                    status: 400,
+                })
+            }
+        } catch (error: any) {
+            return new Response(JSON.stringify({ error: 'Failed to read request body' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 400,
+            })
+        }
+
         let payload: { events?: any[]; token?: string }
         try {
             payload = JSON.parse(raw)
         } catch {
             return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+                status: 400,
+            })
+        }
+
+        if (!payload || typeof payload !== 'object') {
+            return new Response(JSON.stringify({ error: 'Payload must be a JSON object' }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,
             })
@@ -178,7 +203,7 @@ serve(async (req) => {
         }
 
         if (validRows.length === 0) {
-            return new Response(JSON.stringify({ success: false, error: "All events failed validation", invalidEvents }), {
+            return new Response(JSON.stringify({ error: "All events failed validation", invalidEvents }), {
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 status: 400,
             })
@@ -195,11 +220,11 @@ serve(async (req) => {
             status: 200,
         })
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Stack error", error)
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: "exception", message: error?.message || "Unknown error" }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
+            status: 400,
         })
     }
 })
