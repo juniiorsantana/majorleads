@@ -34,6 +34,10 @@ export interface SessionData {
     language: string;
     timezone: string;
     created_at: string;
+    country?: string | null;
+    state?: string | null;
+    city?: string | null;
+    is_bot?: boolean;
 }
 
 export interface IpData {

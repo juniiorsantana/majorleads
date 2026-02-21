@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Eye, MousePointerClick, TrendingUp, Filter, Loader2 } from 'lucide-react';
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { format, subDays, startOfDay } from 'date-fns';
 
 interface PopupAnalytics {
     popup_id: string;
@@ -20,7 +22,12 @@ interface TimeSeriesData {
     convs: number;
 }
 
-export const PopupsReportTab: React.FC = () => {
+interface PopupsReportTabProps {
+    dateRange: string;
+}
+
+export const PopupsReportTab: React.FC<PopupsReportTabProps> = ({ dateRange }) => {
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
     const [popupsData, setPopupsData] = useState<PopupAnalytics[]>([]);
     const [chartData, setChartData] = useState<TimeSeriesData[]>([]);
@@ -28,37 +35,84 @@ export const PopupsReportTab: React.FC = () => {
 
     useEffect(() => {
         async function fetchAnalytics() {
+            if (!user) return;
             setIsLoading(true);
+
             try {
-                // 1. Fetch Aggregated Data per Popup
-                const { data: analyticsData, error: analyticsError } = await supabase.rpc('get_popup_analytics');
-                if (analyticsError) throw analyticsError;
+                const { data: site } = await supabase.from('sites').select('id').eq('user_id', user.id).single();
+                if (!site) return;
+
+                const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
+                const startDate = startOfDay(subDays(new Date(), days - 1));
+
+                // 1. Fetch Popups
+                const { data: popups } = await supabase.from('popups').select('id, name, status').eq('site_id', site.id);
+                const popupsMap = new Map(popups?.map(p => [p.id, { ...p, views: 0, clicks: 0, conversions: 0 }]));
+
+                // 2. Fetch Events for these popups
+                const { data: events } = await supabase
+                    .from('events')
+                    .select('event, timestamp, properties')
+                    .gte('timestamp', startDate.getTime());
+
+                // 3. Fetch Leads
+                const { data: leads } = await supabase
+                    .from('leads')
+                    .select('id, created_at, popup_id')
+                    .eq('site_id', site.id)
+                    .gte('created_at', format(startDate, 'yyyy-MM-dd'));
+
+                const timeSeriesMap: Record<string, { views: number, convs: number }> = {};
+                for (let i = days - 1; i >= 0; i--) {
+                    timeSeriesMap[format(subDays(new Date(), i), 'dd MMM')] = { views: 0, convs: 0 };
+                }
 
                 let totalV = 0, totalC = 0, totalConv = 0;
 
-                const formattedPopups = (analyticsData || []).map((row: any) => {
-                    totalV += Number(row.views);
-                    totalC += Number(row.clicks);
-                    totalConv += Number(row.conversions);
+                // Process Events
+                if (events) {
+                    events.forEach(ev => {
+                        const popup_id = ev.properties?.popup_id;
+                        if (!popup_id || !popupsMap.has(popup_id)) return;
 
-                    const views = Number(row.views);
-                    const clicks = Number(row.clicks);
-                    const conversions = Number(row.conversions);
+                        const ts = parseInt(ev.timestamp) || 0;
+                        const dayKey = ts > 0 ? format(new Date(ts), 'dd MMM') : null;
 
-                    return {
-                        popup_id: row.popup_id,
-                        name: row.popup_name,
-                        status: row.popup_status,
-                        views,
-                        clicks,
-                        conversions,
-                        ctr: views > 0 ? ((clicks / views) * 100).toFixed(1) + '%' : '0%',
-                        convRate: views > 0 ? ((conversions / views) * 100).toFixed(1) + '%' : '0%'
-                    };
-                });
+                        const p = popupsMap.get(popup_id)!;
+                        if (ev.event === 'popup_view') {
+                            p.views++; totalV++;
+                            if (dayKey && timeSeriesMap[dayKey]) timeSeriesMap[dayKey].views++;
+                        }
+                        if (['popup_click'].includes(ev.event)) {
+                            p.clicks++; totalC++;
+                        }
+                    });
+                }
 
-                // Sort by views descending
-                formattedPopups.sort((a, b) => b.views - a.views);
+                // Process Leads
+                if (leads) {
+                    leads.forEach(lead => {
+                        const popup_id = lead.popup_id;
+                        if (popup_id && popupsMap.has(popup_id)) {
+                            popupsMap.get(popup_id)!.conversions++;
+                        }
+                        totalConv++; // Count all leads for total conversions
+
+                        const dayKey = format(new Date(lead.created_at), 'dd MMM');
+                        if (timeSeriesMap[dayKey]) timeSeriesMap[dayKey].convs++;
+                    });
+                }
+
+                const formattedPopups = Array.from(popupsMap.values()).map(row => ({
+                    popup_id: row.id,
+                    popup_name: row.name,
+                    popup_status: row.status,
+                    views: row.views,
+                    clicks: row.clicks,
+                    conversions: row.conversions,
+                    ctr: row.views > 0 ? ((row.clicks / row.views) * 100).toFixed(1) + '%' : '0%',
+                    convRate: row.views > 0 ? ((row.conversions / row.views) * 100).toFixed(1) + '%' : '0%'
+                })).sort((a, b) => b.views - a.views);
 
                 setPopupsData(formattedPopups);
                 setTotals({
@@ -68,27 +122,17 @@ export const PopupsReportTab: React.FC = () => {
                     ctr: totalV > 0 ? ((totalC / totalV) * 100).toFixed(1) + '%' : '0%'
                 });
 
-                // 2. Fetch Time Series Data
-                const { data: timeSeries, error: timeError } = await supabase.rpc('get_popup_time_series');
-                if (timeError) throw timeError;
-
-                const formattedChart = (timeSeries || []).map((row: any) => ({
-                    name: row.date,
-                    views: Number(row.views),
-                    convs: Number(row.conversions)
-                }));
-
-                setChartData(formattedChart);
+                setChartData(Object.entries(timeSeriesMap).map(([k, v]) => ({ name: k, views: v.views, convs: v.convs })));
 
             } catch (err) {
-                console.error("Error fetching popup analytics:", err);
+                console.error("Error processing popup analytics:", err);
             } finally {
                 setIsLoading(false);
             }
         }
 
         fetchAnalytics();
-    }, []);
+    }, [user, dateRange]);
 
     const metrics = [
         { label: 'Exibições Totais', value: totals.views.toLocaleString('pt-BR'), icon: Eye, trend: '', isPositive: true },
@@ -181,7 +225,7 @@ export const PopupsReportTab: React.FC = () => {
                         <tbody className="divide-y divide-zinc-200">
                             {popupsData.length > 0 ? popupsData.map((popup) => (
                                 <tr key={popup.popup_id} className="hover:bg-zinc-50 transition-colors">
-                                    <td className="px-5 py-4 font-medium text-zinc-900">{popup.name}</td>
+                                    <td className="px-5 py-4 font-medium text-zinc-900">{popup.popup_name}</td>
                                     <td className="px-5 py-4 text-right text-zinc-600">
                                         {popup.views.toLocaleString('pt-BR')}
                                     </td>

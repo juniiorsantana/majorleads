@@ -10,6 +10,7 @@ import { Popup, LeadProfile } from '../core/types';
 import { executeActions } from './actions';
 
 type TrackFn = (event: string, props: Record<string, unknown>) => void;
+type IdentifyFn = (data: Record<string, unknown>) => void;
 
 const HOST_ID = '__ls_popup_host__';
 
@@ -200,9 +201,35 @@ export function renderPopup(popup: Popup, profile: LeadProfile, track: TrackFn, 
 
   // CTA buttons dentro do conteúdo
   shadow.querySelectorAll('[data-ls-action="submit"], [data-ls-submit]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+
+      // Captura dados de inputs no popup
+      const leadData: Record<string, string> = { popup_id: popup.id };
+      let hasData = false;
+
+      shadow.querySelectorAll<HTMLInputElement>('input, select, textarea').forEach(input => {
+        const name = input.name || input.id;
+        if (!name || input.type === 'submit' || input.type === 'button') return;
+
+        const isEmail = name.toLowerCase().includes('email');
+        const isPhone = name.toLowerCase().includes('phone') || name.toLowerCase().includes('tel') || name.toLowerCase().includes('whatsapp');
+        const isName = name.toLowerCase().includes('name') || name.toLowerCase().includes('first') || name.toLowerCase().includes('last');
+
+        if (isEmail && input.value) { leadData.email = input.value.trim(); hasData = true; }
+        else if (isPhone && input.value) { leadData.whatsapp = input.value.trim(); hasData = true; }
+        else if (isName && input.value) { leadData.name = input.value.trim(); hasData = true; }
+        else if (input.value) { leadData[name] = input.value.trim(); }
+      });
+
+      if (hasData && typeof window !== 'undefined' && (window as any).LeadSense?.identify) {
+        (window as any).LeadSense.identify(leadData);
+      }
+
       track('popup_cta_click', { popup_id: popup.id });
-      executeActions(popup, track);
+      track('popup_converted', { popup_id: popup.id });
+
+      executeActions(popup, track, profile);
       scheduleClose();
     });
   });

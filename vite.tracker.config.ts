@@ -5,12 +5,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
     build: {
         lib: {
-            entry: path.resolve(__dirname, 'src/tracker/core.ts'),
+            entry: path.resolve(__dirname, 'tracker/src/core/init.ts'),
             name: 'LeadSense',
-            fileName: (format) => `tracker.${format}.js`,
-            formats: ['iife'], // Build as IIFE for direct browser inclusion
+            fileName: () => `tracker.js`,
+            formats: ['iife'],
         },
-        outDir: 'dist/tracker',
-        emptyOutDir: true,
+        outDir: 'public',
+        emptyOutDir: false,
     },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Hexagon,
   Check,
@@ -13,18 +13,148 @@ import {
   AlertCircle,
   Loader2,
   Layout,
-  Copy
+  Copy,
+  Users,
+  Zap,
+  TrendingUp,
+  BarChart2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+/* ─────────────────────────────────────────────────────────
+   LEFT PANEL — Brand & Social Proof
+───────────────────────────────────────────────────────── */
+const stats = [
+  { icon: Users, value: '12.4k', label: 'Leads captured today', color: '#22d3ee' },
+  { icon: TrendingUp, value: '94%', label: 'Avg. capture rate', color: '#4ade80' },
+  { icon: Zap, value: '< 1s', label: 'Script load time', color: '#facc15' },
+];
+
+function CountUp({ target }: { target: string }) {
+  return <span className="tabular-nums">{target}</span>;
+}
+
+function LeftPanel() {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick(v => v + 1), 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div
+      className="hidden lg:flex flex-col justify-between h-full px-12 py-14"
+      style={{ background: 'linear-gradient(160deg, #0a0a0a 0%, #111827 100%)' }}
+    >
+      {/* Logo */}
+      <div className="flex items-center gap-3">
+        <Hexagon className="text-cyan-400 fill-cyan-400" size={32} />
+        <span className="text-xl font-bold tracking-tight text-white">MajorLeads</span>
+      </div>
+
+      {/* Hero copy */}
+      <div>
+        <p className="text-cyan-400 text-xs font-semibold uppercase tracking-widest mb-4">
+          Setup · 3 steps · &lt; 2 min
+        </p>
+        <h2 className="text-4xl font-extrabold text-white leading-tight mb-4">
+          Turn visitors into<br />
+          <span className="text-transparent bg-clip-text"
+            style={{ backgroundImage: 'linear-gradient(90deg, #22d3ee, #4ade80)' }}>
+            qualified leads.
+          </span>
+        </h2>
+        <p className="text-zinc-400 text-base leading-relaxed max-w-xs">
+          Install one script. Watch leads, popups, and conversions flow into your dashboard in real time.
+        </p>
+
+        {/* Live stats */}
+        <div className="mt-10 space-y-4">
+          {stats.map(({ icon: Icon, value, label, color }, i) => (
+            <div
+              key={label}
+              className="flex items-center gap-4 p-4 rounded-xl border"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                animation: `fadeSlideIn 0.5s ease ${i * 0.1}s both`
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: `${color}18`, color }}
+              >
+                <Icon size={18} />
+              </div>
+              <div>
+                <p className="text-white font-bold text-lg leading-none">
+                  <CountUp key={tick} target={value} />
+                </p>
+                <p className="text-zinc-500 text-xs mt-0.5">{label}</p>
+              </div>
+              <div
+                className="ml-auto w-2 h-2 rounded-full animate-pulse"
+                style={{ background: color }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <p className="text-zinc-600 text-xs">
+        Trusted by 3,200+ growth teams · LGPD & GDPR compliant
+      </p>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   STEP INDICATOR
+───────────────────────────────────────────────────────── */
+const STEPS = ['Create Site', 'Install Script', 'Verify'];
+
+function StepIndicator({ current }: { current: number }) {
+  return (
+    <div className="flex items-center gap-0 mb-10">
+      {STEPS.map((label, i) => {
+        const step = i + 1;
+        const done = current > step;
+        const active = current === step;
+        return (
+          <React.Fragment key={label}>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300
+                  ${done ? 'bg-emerald-500 border-emerald-500 text-white'
+                    : active ? 'bg-zinc-900 border-zinc-900 text-white shadow-lg shadow-zinc-900/20'
+                      : 'bg-white border-zinc-200 text-zinc-400'}`}
+              >
+                {done ? <Check size={14} strokeWidth={3} /> : step}
+              </div>
+              <span className={`text-sm font-medium transition-colors ${active ? 'text-zinc-900' : 'text-zinc-400'}`}>
+                {label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className={`flex-1 h-px mx-3 transition-colors duration-500 ${current > step ? 'bg-emerald-400' : 'bg-zinc-200'}`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────── */
 export const Onboarding: React.FC = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    siteName: '',
-    siteUrl: '',
-    platform: 'HTML / Custom'
-  });
+  const [copied, setCopied] = useState(false);
+  const [formData, setFormData] = useState({ siteName: '', siteUrl: '', platform: 'HTML / Custom' });
   const [errors, setErrors] = useState({ siteUrl: '' });
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
 
@@ -36,372 +166,323 @@ export const Onboarding: React.FC = () => {
 
   const validateStep1 = () => {
     if (!formData.siteName || !formData.siteUrl) return false;
-
-    // Simple URL validation
-    const urlPattern = new RegExp('^(https?:\\/\\/)?' + // protocol
-      '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
-      '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
-      '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-      '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
-      '(\\#[-a-z\\d_]*)?$', 'i'); // fragment locator
-
+    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
     if (!urlPattern.test(formData.siteUrl)) {
       setErrors({ siteUrl: 'Please enter a valid URL (e.g. https://yoursite.com)' });
       return false;
     }
-
     return true;
   };
 
   const nextStep = () => {
-    if (currentStep === 1) {
-      if (validateStep1()) setCurrentStep(2);
-    } else {
-      setCurrentStep(prev => prev + 1);
-    }
+    if (currentStep === 1) { if (validateStep1()) setCurrentStep(2); }
+    else setCurrentStep(prev => prev + 1);
   };
 
-  const prevStep = () => {
-    setCurrentStep(prev => prev - 1);
+  const prevStep = () => setCurrentStep(prev => prev - 1);
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(
+      `<script src="https://cdn.majorleads.io/v1/tracker.js" data-token="pk_live_ABC123XYZ789" async></script>`
+    ).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
   const checkInstallation = () => {
     setVerificationStatus('checking');
-    // Simulate API call
     setTimeout(() => {
-      // For demo purposes, let's succeed randomly or usually succeed
-      const isSuccess = Math.random() > 0.2;
-      setVerificationStatus(isSuccess ? 'success' : 'error');
+      setVerificationStatus(Math.random() > 0.2 ? 'success' : 'error');
     }, 2000);
   };
 
-  // Render Helpers
-  const renderStepIndicator = () => (
-    <div className="w-full max-w-2xl mb-12">
-      <div className="relative flex justify-between items-center text-sm font-medium">
-        <div className="absolute top-1/2 left-0 w-full h-[2px] bg-zinc-200 -z-10 transform -translate-y-1/2"></div>
-
-        {/* Step 1 Indicator */}
-        <div className={`flex items-center gap-2 bg-zinc-50 pr-4 transition-colors ${currentStep >= 1 ? 'text-zinc-900' : 'text-zinc-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300
-            ${currentStep > 1
-              ? 'bg-green-100 text-green-700 border-green-200'
-              : currentStep === 1
-                ? 'bg-brand-600 text-white ring-4 ring-brand-100 border-transparent'
-                : 'bg-zinc-100 text-zinc-400 border-zinc-200'
-            }`}>
-            {currentStep > 1 ? <Check size={18} /> : <span>1</span>}
-          </div>
-          <span className={currentStep === 1 ? 'text-brand-600 font-semibold' : ''}>Create Site</span>
-        </div>
-
-        {/* Step 2 Indicator */}
-        <div className={`flex items-center gap-2 bg-zinc-50 px-4 transition-colors ${currentStep >= 2 ? 'text-zinc-900' : 'text-zinc-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300
-            ${currentStep > 2
-              ? 'bg-green-100 text-green-700 border-green-200'
-              : currentStep === 2
-                ? 'bg-brand-600 text-white ring-4 ring-brand-100 border-transparent'
-                : 'bg-zinc-100 text-zinc-400 border-zinc-200'
-            }`}>
-            {currentStep > 2 ? <Check size={18} /> : <span>2</span>}
-          </div>
-          <span className={currentStep === 2 ? 'text-brand-600 font-semibold' : ''}>Install Script</span>
-        </div>
-
-        {/* Step 3 Indicator */}
-        <div className={`flex items-center gap-2 bg-zinc-50 pl-4 transition-colors ${currentStep >= 3 ? 'text-zinc-900' : 'text-zinc-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-300
-            ${currentStep === 3
-              ? 'bg-brand-600 text-white ring-4 ring-brand-100 border-transparent'
-              : 'bg-zinc-100 text-zinc-400 border-zinc-200'
-            }`}>
-            <span>3</span>
-          </div>
-          <span className={currentStep === 3 ? 'text-brand-600 font-semibold' : ''}>Verify</span>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-zinc-50">
-      <div className="mb-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Hexagon className="text-brand-600 fill-brand-600" size={40} />
-          <span className="text-2xl font-bold tracking-tight text-zinc-900">MajorLeads</span>
+    <>
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.94); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        .form-panel { animation: scaleIn 0.35s ease both; }
+      `}</style>
+
+      <div className="min-h-screen flex" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+
+        {/* ── LEFT: Brand Panel ─────────────────── */}
+        <div className="w-[38%] shrink-0">
+          <LeftPanel />
         </div>
 
-        {currentStep === 1 && (
-          <>
-            <h1 className="text-3xl font-bold text-zinc-900 mb-2">Let's get your site set up 🚀</h1>
-            <p className="text-zinc-500 text-lg">Tell us about the site you want to track.</p>
-          </>
-        )}
-        {currentStep === 2 && (
-          <>
-            <h1 className="text-3xl font-bold text-zinc-900 mb-2">Install the tracking code 🛠️</h1>
-            <p className="text-zinc-500 text-lg">Add the snippet to start collecting data.</p>
-          </>
-        )}
-        {currentStep === 3 && (
-          <>
-            <h1 className="text-3xl font-bold text-zinc-900 mb-2">Verify your installation ✅</h1>
-            <p className="text-zinc-500 text-lg">Check if the script is active on your site.</p>
-          </>
-        )}
-      </div>
+        {/* ── RIGHT: Form Panel ─────────────────── */}
+        <div className="flex-1 flex flex-col bg-zinc-50/60 overflow-y-auto">
 
-      {renderStepIndicator()}
-
-      {/* STEP 1 CONTENT */}
-      {currentStep === 1 && (
-        <div className="w-full max-w-xl bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="p-8 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Site Name</label>
-              <input
-                type="text"
-                name="siteName"
-                value={formData.siteName}
-                onChange={handleInputChange}
-                placeholder="My Online Store"
-                className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Site URL</label>
-              <div className="relative">
-                <Globe className="absolute left-3 top-3 text-zinc-400" size={18} />
-                <input
-                  type="text"
-                  name="siteUrl"
-                  value={formData.siteUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://yoursite.com"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-lg border text-zinc-900 focus:outline-none focus:ring-2 transition-all ${errors.siteUrl
-                    ? 'border-red-300 focus:ring-red-200 focus:border-red-500'
-                    : 'border-zinc-300 focus:ring-brand-500 focus:border-transparent'
-                    }`}
-                />
-              </div>
-              {errors.siteUrl && (
-                <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle size={14} />
-                  {errors.siteUrl}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">Platform</label>
-              <div className="relative">
-                <Layout className="absolute left-3 top-3 text-zinc-400" size={18} />
-                <select
-                  name="platform"
-                  value={formData.platform}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-300 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent appearance-none bg-white cursor-pointer"
-                >
-                  <option>HTML / Custom</option>
-                  <option>WordPress</option>
-                  <option>Shopify</option>
-                  <option>Webflow</option>
-                  <option>Wix</option>
-                  <option>Other</option>
-                </select>
-              </div>
-            </div>
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2 p-6 border-b border-zinc-100 bg-white">
+            <Hexagon className="text-zinc-900 fill-zinc-900" size={24} />
+            <span className="text-lg font-bold text-zinc-900">MajorLeads</span>
           </div>
 
-          <div className="px-8 py-5 bg-zinc-50 border-t border-zinc-200 flex justify-end">
-            <button
-              onClick={nextStep}
-              disabled={!formData.siteName || !formData.siteUrl}
-              className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2"
-            >
-              Continue
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      )}
+          <div className="flex-1 flex flex-col justify-center px-8 py-12 max-w-xl mx-auto w-full">
 
-      {/* STEP 2 CONTENT */}
-      {currentStep === 2 && (
-        <div className="w-full max-w-2xl bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-          <div className="p-8">
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b border-zinc-100">
-              <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${formData.platform === 'HTML / Custom' ? 'bg-brand-50 text-brand-900 border border-brand-100' : 'hover:bg-zinc-50 text-zinc-600 border border-transparent'}`}>
-                <Code size={18} /> HTML / Custom
-              </button>
-              <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${formData.platform === 'WordPress' ? 'bg-brand-50 text-brand-900 border border-brand-100' : 'hover:bg-zinc-50 text-zinc-600 border border-transparent'}`}>
-                <Globe size={18} /> WordPress
-              </button>
-              <button className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${formData.platform === 'Shopify' ? 'bg-brand-50 text-brand-900 border border-brand-100' : 'hover:bg-zinc-50 text-zinc-600 border border-transparent'}`}>
-                <ShoppingBag size={18} /> Shopify
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-50 text-zinc-600 text-sm font-medium border border-transparent transition-colors">
-                <Tag size={18} /> GTM
-              </button>
+            {/* Step title */}
+            <div className="mb-8">
+              {currentStep === 1 && <>
+                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">Set up your site</h1>
+                <p className="text-zinc-500 text-sm">Tell us where to capture leads.</p>
+              </>}
+              {currentStep === 2 && <>
+                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">Install the script</h1>
+                <p className="text-zinc-500 text-sm">One snippet. Works on any platform.</p>
+              </>}
+              {currentStep === 3 && <>
+                <h1 className="text-2xl font-extrabold text-zinc-900 mb-1">Verify installation</h1>
+                <p className="text-zinc-500 text-sm">We'll ping your site to confirm it's live.</p>
+              </>}
             </div>
 
-            <div className="mb-6">
-              <p className="text-zinc-600 text-sm leading-relaxed">
-                Copy the code below and paste it immediately before the closing <code className="bg-zinc-100 px-1 py-0.5 rounded text-zinc-800 text-xs font-mono">&lt;/head&gt;</code> tag on every page of your website.
-              </p>
-            </div>
+            <StepIndicator current={currentStep} />
 
-            <div className="relative group">
-              <div className="absolute top-3 right-3 z-10">
-                <button className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-md transition-colors border border-zinc-700">
-                  <Copy size={14} /> Copy
-                </button>
-              </div>
-              <pre className="bg-[#18181B] rounded-xl p-5 overflow-x-auto text-sm font-mono leading-relaxed border border-zinc-800 shadow-inner">
-                <code className="language-html">
-                  <span className="text-zinc-500">&lt;!-- MajorLeads Tracker --&gt;</span>
-                  {"\n"}<span className="text-purple-400">&lt;script</span>
-                  {"\n"}  <span className="text-blue-400">src</span>=<span className="text-green-400">"https://cdn.majorleads.io/v1/tracker.js"</span>
-                  {"\n"}  <span className="text-blue-400">data-token</span>=<span className="text-green-400">"pk_live_ABC123XYZ789"</span>
-                  {"\n"}  <span className="text-blue-400">async</span><span className="text-purple-400">&gt;</span>
-                  {"\n"}<span className="text-purple-400">&lt;/script&gt;</span>
-                </code>
-              </pre>
-            </div>
+            {/* ── STEP 1 ─────────────────────────── */}
+            {currentStep === 1 && (
+              <div className="form-panel bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div className="p-7 space-y-5">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                      Site Name
+                    </label>
+                    <input
+                      type="text" name="siteName" value={formData.siteName}
+                      onChange={handleInputChange} placeholder="My Online Store"
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 text-zinc-900 text-sm
+                        focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent
+                        placeholder:text-zinc-300 transition-all bg-zinc-50"
+                    />
+                  </div>
 
-            <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50 text-blue-800 rounded-lg text-sm border border-blue-100">
-              <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
-              <p>Need help? Our team can install this for you for free. <a href="#" className="underline hover:text-blue-900">Request free installation</a>.</p>
-            </div>
-          </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                      Site URL
+                    </label>
+                    <div className="relative">
+                      <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                      <input
+                        type="text" name="siteUrl" value={formData.siteUrl}
+                        onChange={handleInputChange} placeholder="https://yoursite.com"
+                        className={`w-full pl-10 pr-4 py-3 rounded-xl border text-zinc-900 text-sm
+                          focus:outline-none focus:ring-2 transition-all placeholder:text-zinc-300 bg-zinc-50
+                          ${errors.siteUrl
+                            ? 'border-red-300 focus:ring-red-200'
+                            : 'border-zinc-200 focus:ring-zinc-900 focus:border-transparent'}`}
+                      />
+                    </div>
+                    {errors.siteUrl && (
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle size={12} />{errors.siteUrl}
+                      </p>
+                    )}
+                  </div>
 
-          <div className="px-8 py-5 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between">
-            <button
-              onClick={prevStep}
-              className="text-zinc-500 hover:text-zinc-800 text-sm font-medium flex items-center gap-2 transition-colors"
-            >
-              <ChevronLeft size={18} />
-              Back
-            </button>
-            <div className="flex gap-3">
-              <button className="text-zinc-600 hover:text-zinc-900 text-sm font-medium flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-100 transition-colors">
-                <Mail size={18} />
-                Email to dev
-              </button>
-              <button
-                onClick={nextStep}
-                className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-2"
-              >
-                Verify Installation
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3 CONTENT */}
-      {currentStep === 3 && (
-        <div className="w-full max-w-xl bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500">
-          <div className="p-8 flex flex-col items-center text-center">
-
-            <div className="w-full bg-zinc-50 border border-zinc-100 rounded-lg p-4 mb-8 flex items-center gap-4 text-left">
-              <div className="w-12 h-12 bg-white rounded-lg border border-zinc-200 flex items-center justify-center shrink-0">
-                <Globe className="text-brand-600" size={24} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-zinc-900 font-semibold truncate">{formData.siteName}</h3>
-                <p className="text-zinc-500 text-sm truncate">{formData.siteUrl}</p>
-              </div>
-              <div className="px-2 py-1 bg-zinc-200 rounded text-xs text-zinc-600 font-medium">
-                {formData.platform}
-              </div>
-            </div>
-
-            {verificationStatus === 'idle' && (
-              <div className="py-4">
-                <button
-                  onClick={checkInstallation}
-                  className="w-full sm:w-64 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-base font-semibold shadow-lg shadow-brand-200 hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                >
-                  Check Installation
-                </button>
-              </div>
-            )}
-
-            {verificationStatus === 'checking' && (
-              <div className="py-8 flex flex-col items-center">
-                <Loader2 size={48} className="text-brand-600 animate-spin mb-4" />
-                <p className="text-zinc-500 font-medium animate-pulse">Checking for script...</p>
-              </div>
-            )}
-
-            {verificationStatus === 'success' && (
-              <div className="py-2 flex flex-col items-center animate-in zoom-in-95 duration-300">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
-                  <Check size={32} strokeWidth={3} />
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
+                      Platform
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['HTML / Custom', 'WordPress', 'Shopify', 'Webflow', 'Wix', 'Other'].map(p => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, platform: p }))}
+                          className={`px-3 py-2 rounded-xl border text-xs font-medium transition-all
+                            ${formData.platform === p
+                              ? 'bg-zinc-900 border-zinc-900 text-white shadow-sm'
+                              : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-400'}`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <h2 className="text-xl font-bold text-zinc-900 mb-1">Script detected!</h2>
-                <p className="text-zinc-500 mb-6 max-w-xs">We received the first event from <strong>{new URL(formData.siteUrl).hostname}</strong>.</p>
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-full sm:w-64 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl text-base font-semibold shadow-lg shadow-green-200 hover:shadow-xl transition-all flex items-center justify-center gap-2"
-                >
-                  Go to Dashboard
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            )}
 
-            {verificationStatus === 'error' && (
-              <div className="py-2 flex flex-col items-center animate-in shake duration-300">
-                <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
-                  <AlertCircle size={32} strokeWidth={3} />
-                </div>
-                <h2 className="text-xl font-bold text-zinc-900 mb-1">Script not detected yet</h2>
-                <p className="text-zinc-500 mb-6 max-w-sm">Make sure the code is pasted before the <code className="bg-zinc-100 px-1 rounded text-zinc-700 text-xs font-mono">&lt;/head&gt;</code> tag and you have visited the site at least once.</p>
-                <div className="pt-4 mt-8 border-t border-zinc-100 flex justify-between items-center">
+                <div className="px-7 py-4 bg-zinc-50 border-t border-zinc-100 flex justify-end">
                   <button
-                    type="button"
-                    onClick={() => navigate('/dashboard')}
-                    className="text-sm text-zinc-500 hover:text-zinc-700 font-medium transition-colors"
+                    onClick={nextStep}
+                    disabled={!formData.siteName || !formData.siteUrl}
+                    className="bg-zinc-900 hover:bg-zinc-700 disabled:opacity-40 disabled:cursor-not-allowed
+                      text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2
+                      shadow-lg shadow-zinc-900/10 hover:shadow-xl hover:shadow-zinc-900/15 active:scale-95"
                   >
-                    View Instructions
-                  </button>
-                  <button
-                    onClick={checkInstallation}
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg font-medium shadow-sm transition-colors"
-                  >
-                    Try Again
+                    Continue <ArrowRight size={16} />
                   </button>
                 </div>
               </div>
             )}
 
-          </div>
+            {/* ── STEP 2 ─────────────────────────── */}
+            {currentStep === 2 && (
+              <div className="form-panel bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div className="p-7">
+                  {/* Platform tabs */}
+                  <div className="flex gap-1.5 mb-6 flex-wrap">
+                    {[
+                      { label: 'HTML', icon: Code },
+                      { label: 'WordPress', icon: Globe },
+                      { label: 'Shopify', icon: ShoppingBag },
+                      { label: 'GTM', icon: Tag },
+                    ].map(({ label, icon: Icon }) => (
+                      <button key={label}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium
+                          border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-400 hover:bg-white transition-all">
+                        <Icon size={14} />{label}
+                      </button>
+                    ))}
+                  </div>
 
-          <div className="px-8 py-4 bg-zinc-50 border-t border-zinc-200 flex justify-start">
-            <button
-              onClick={prevStep}
-              className="text-zinc-500 hover:text-zinc-800 text-sm font-medium flex items-center gap-2 transition-colors"
-            >
-              <ChevronLeft size={18} />
-              Back
-            </button>
+                  <p className="text-zinc-500 text-sm mb-4">
+                    Paste this before the closing{' '}
+                    <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-800 text-xs font-mono">&lt;/head&gt;</code>{' '}
+                    tag on every page.
+                  </p>
+
+                  {/* Code block */}
+                  <div className="relative">
+                    <pre className="bg-[#0d0d0d] rounded-xl p-5 overflow-x-auto text-xs font-mono leading-6 border border-zinc-800">
+                      <code>
+                        <span className="text-zinc-500">{'<!-- MajorLeads Tracker -->'}</span>{'\n'}
+                        <span className="text-sky-400">{'<script'}</span>{'\n'}
+                        {'  '}<span className="text-blue-300">src</span>=<span className="text-emerald-400">"https://cdn.majorleads.io/v1/tracker.js"</span>{'\n'}
+                        {'  '}<span className="text-blue-300">data-token</span>=<span className="text-emerald-400">"pk_live_ABC123XYZ789"</span>{'\n'}
+                        {'  '}<span className="text-blue-300">async</span><span className="text-sky-400">{'>'}</span>{'\n'}
+                        <span className="text-sky-400">{'</script>'}</span>
+                      </code>
+                    </pre>
+                    <button
+                      onClick={copyCode}
+                      className={`absolute top-3 right-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all font-medium
+                        ${copied
+                          ? 'bg-emerald-600 border-emerald-600 text-white'
+                          : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'}`}
+                    >
+                      {copied ? <><Check size={12} /> Copied!</> : <><Copy size={12} /> Copy</>}
+                    </button>
+                  </div>
+
+                  <div className="mt-4 flex items-start gap-3 p-3.5 bg-sky-50 text-sky-800 rounded-xl text-xs border border-sky-100">
+                    <Info size={14} className="text-sky-500 shrink-0 mt-0.5" />
+                    <p>Need help? Our team can install this for free. <a href="#" className="underline underline-offset-2 hover:text-sky-900">Request free setup →</a></p>
+                  </div>
+                </div>
+
+                <div className="px-7 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-between">
+                  <button onClick={prevStep} className="text-zinc-400 hover:text-zinc-800 text-sm font-medium flex items-center gap-1.5 transition-colors">
+                    <ChevronLeft size={16} /> Back
+                  </button>
+                  <div className="flex gap-2">
+                    <button className="text-zinc-500 hover:text-zinc-800 text-sm font-medium flex items-center gap-1.5 px-4 py-2 rounded-xl hover:bg-zinc-100 transition-all">
+                      <Mail size={14} /> Email to dev
+                    </button>
+                    <button onClick={nextStep}
+                      className="bg-zinc-900 hover:bg-zinc-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold
+                        transition-all flex items-center gap-2 shadow-lg shadow-zinc-900/10 active:scale-95">
+                      Verify <ArrowRight size={15} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── STEP 3 ─────────────────────────── */}
+            {currentStep === 3 && (
+              <div className="form-panel bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
+                <div className="p-7">
+                  {/* Site summary */}
+                  <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-xl border border-zinc-100 mb-7">
+                    <div className="w-10 h-10 bg-white rounded-xl border border-zinc-200 flex items-center justify-center shrink-0">
+                      <BarChart2 className="text-zinc-700" size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-zinc-900 font-semibold text-sm truncate">{formData.siteName || 'My Site'}</h3>
+                      <p className="text-zinc-400 text-xs truncate">{formData.siteUrl || 'yoursite.com'}</p>
+                    </div>
+                    <span className="text-xs px-2 py-1 bg-zinc-200/70 text-zinc-600 rounded-lg font-medium shrink-0">
+                      {formData.platform}
+                    </span>
+                  </div>
+
+                  {verificationStatus === 'idle' && (
+                    <div className="text-center py-4">
+                      <p className="text-zinc-500 text-sm mb-5">Visit your site once after installing the script, then click below.</p>
+                      <button onClick={checkInstallation}
+                        className="w-full bg-zinc-900 hover:bg-zinc-700 text-white py-3 rounded-xl font-semibold text-sm
+                          transition-all shadow-lg shadow-zinc-900/10 hover:shadow-xl active:scale-95 flex items-center justify-center gap-2">
+                        <Zap size={16} /> Check Installation
+                      </button>
+                    </div>
+                  )}
+
+                  {verificationStatus === 'checking' && (
+                    <div className="py-10 flex flex-col items-center">
+                      <Loader2 size={40} className="text-zinc-900 animate-spin mb-4" />
+                      <p className="text-zinc-500 text-sm animate-pulse">Pinging your site...</p>
+                    </div>
+                  )}
+
+                  {verificationStatus === 'success' && (
+                    <div className="py-4 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
+                        <Check size={28} strokeWidth={3} />
+                      </div>
+                      <h2 className="text-lg font-bold text-zinc-900 mb-1">Script detected! 🎉</h2>
+                      <p className="text-zinc-500 text-sm mb-6">We received the first event from your site. You're good to go.</p>
+                      <button onClick={() => navigate('/dashboard')}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold text-sm
+                          transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95">
+                        Go to Dashboard <ArrowRight size={16} />
+                      </button>
+                    </div>
+                  )}
+
+                  {verificationStatus === 'error' && (
+                    <div className="py-4 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4">
+                        <AlertCircle size={28} strokeWidth={3} />
+                      </div>
+                      <h2 className="text-lg font-bold text-zinc-900 mb-1">Not detected yet</h2>
+                      <p className="text-zinc-500 text-sm mb-5 max-w-xs">
+                        Make sure the snippet is before <code className="bg-zinc-100 px-1 rounded text-xs font-mono">&lt;/head&gt;</code> and you've visited the page.
+                      </p>
+                      <button onClick={checkInstallation}
+                        className="w-full bg-zinc-900 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-semibold text-sm
+                          transition-all flex items-center justify-center gap-2 active:scale-95">
+                        Try Again
+                      </button>
+                      <button onClick={() => navigate('/dashboard')} className="mt-3 text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+                        Skip and go to dashboard
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="px-7 py-4 bg-zinc-50 border-t border-zinc-100 flex">
+                  <button onClick={prevStep} className="text-zinc-400 hover:text-zinc-800 text-sm font-medium flex items-center gap-1.5 transition-colors">
+                    <ChevronLeft size={16} /> Back
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Skip link */}
+            <div className="mt-6 text-center">
+              <button onClick={() => navigate('/dashboard')}
+                className="text-zinc-400 hover:text-zinc-600 text-xs transition-colors">
+                Skip for now and go to dashboard →
+              </button>
+            </div>
           </div>
         </div>
-      )}
-
-      <div className="mt-8 text-center">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-zinc-400 hover:text-zinc-600 text-sm transition-colors"
-        >
-          Skip for now and go to dashboard
-        </button>
       </div>
-    </div>
+    </>
   );
 };

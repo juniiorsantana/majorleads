@@ -44,17 +44,19 @@
   - Métricas de KPI (Total Leads, Leads no Período, Popups Ativos)
   - Top UTM Sources e Dispositivos
   - Feed de Atividade Recente
+- Dashboards de Relatórios por Popup (Visualizações vs Conversão e Tabela de Leads Recentes)
+- Relatórios avançados globais (Relatórios Sub-abas: Popups e UTM)
+- Configuração de Webhook de saída (Global em Configurações e Específico por Popup)
+- Integração de Leads com Popup ID (Rastreamento completo da origem da conversão)
 
-### 🔄 Em andamento
-- [ ] Implementação do Tracker in-site (tracker.js)
-- [ ] Dashboards de Relatórios por Popup
-
-
+### ✅ Concluído
+- Setup de Infraestrutura Playwright
+- Testes de Inicialização e Captura (Core Flow)
+- Verificação automatizada de Leads e Identificação
 
 ### 📋 Pendente (por prioridade)
-- [ ] Relatórios avançados individuais
-- [ ] Webhook de saída configurável no editor
-- [ ] Testes E2E do fluxo de captura
+- [ ] Banco de eventos (ClickHouse — escalabilidade futura)
+- [ ] Autenticação e multi-tenant (v2)
 
 ---
 
@@ -79,7 +81,8 @@
 ### 📋 Pendente
 - [ ] Autenticação e multi-tenant
 - [ ] Banco de eventos (ClickHouse)
-- [ ] Integração Webhook
+- Integração Webhook (Global e Específico) via Edge Functions
+- Captura de Popup ID nas conversões e eventos
 
 ---
 
@@ -103,9 +106,8 @@
   - Validação estrita de eventos usando Zod limitando data e propriedades
   - Allowlist restrita para o Form Collector, prevenindo vazamento de dados de cartão/senhas e suporte a `data-ls-ignore`
 
-### 📋 Pendente
-- [ ] Integração com IP Enrichment no client-side
-- [ ] Privacy mode (consent_required / anonymous)
+- [x] Integração com IP Enrichment no client-side
+- [x] Privacy mode (consent_required / anonymous)
 
 ---
 

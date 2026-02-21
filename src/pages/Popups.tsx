@@ -172,7 +172,7 @@ export const Popups: React.FC = () => {
           </span>
         </div>
         <button
-          onClick={() => navigate('/dashboard/popups/editor')}
+          onClick={() => navigate('/popups/editor')}
           className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm"
         >
           <Plus size={16} strokeWidth={2.5} />
@@ -249,7 +249,7 @@ export const Popups: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
             {/* Create Card */}
             <button
-              onClick={() => navigate('/dashboard/popups/editor')}
+              onClick={() => navigate('/popups/editor')}
               className="group min-h-[400px] rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/50 hover:bg-white hover:border-zinc-900 transition-all duration-300 flex flex-col items-center justify-center text-center cursor-pointer p-8 relative overflow-hidden"
             >
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0.02),transparent_70%)]" />
@@ -351,13 +351,17 @@ export const Popups: React.FC = () => {
                       <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 p-3 transition-all duration-300 ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
                         }`}>
                         <button
-                          onClick={() => navigate(`/dashboard/popups/editor/${popup.id}`)}
+                          onClick={() => navigate(`/popups/editor/${popup.id}`)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg text-xs font-semibold text-zinc-900 shadow-lg hover:bg-zinc-50 transition-colors"
                         >
                           Editar <ArrowUpRight size={12} />
                         </button>
-                        <button className="p-1.5 bg-white/90 rounded-lg text-zinc-600 shadow-lg hover:bg-white transition-colors">
-                          <Copy size={14} />
+                        <button
+                          onClick={() => navigate(`/reports/popups/${popup.id}`)}
+                          className="p-1.5 bg-white/90 rounded-lg text-zinc-600 shadow-lg hover:bg-white hover:text-brand-600 transition-colors"
+                          title="Ver Relatório"
+                        >
+                          <BarChart3 size={14} />
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setDeleteModal({ id: popup.id, name: popup.name }); }}
@@ -385,7 +389,10 @@ export const Popups: React.FC = () => {
                               <button className="w-full px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 flex items-center gap-2 font-medium">
                                 <Copy size={12} /> Duplicar
                               </button>
-                              <button className="w-full px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 flex items-center gap-2 font-medium">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); navigate(`/reports/popups/${popup.id}`); }}
+                                className="w-full px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 flex items-center gap-2 font-medium"
+                              >
                                 <BarChart3 size={12} /> Ver relatório
                               </button>
                               <button className="w-full px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 flex items-center gap-2 font-medium">
@@ -448,7 +455,7 @@ export const Popups: React.FC = () => {
                           </span>
                         </div>
                         <button
-                          onClick={() => navigate(`/dashboard/popups/editor/${popup.id}`)}
+                          onClick={() => navigate(`/popups/editor/${popup.id}`)}
                           className="flex items-center justify-center p-2 text-zinc-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
                           title="Editar Popup"
                         >

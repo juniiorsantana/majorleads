@@ -5,11 +5,11 @@
  * Executa as ações configuradas em um popup após interação do usuário.
  */
 
-import { Popup } from '../core/types';
+import { Popup, LeadProfile } from '../core/types';
 
 type TrackFn = (event: string, props: Record<string, unknown>) => void;
 
-export function executeActions(popup: Popup, track: TrackFn): void {
+export function executeActions(popup: Popup, track: TrackFn, profile?: LeadProfile): void {
     const { actions = [] } = popup.config;
 
     for (const action of actions) {
@@ -41,7 +41,13 @@ export function executeActions(popup: Popup, track: TrackFn): void {
                     fetch(action.value, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ popup_id: popup.id, timestamp: Date.now() }),
+                        body: JSON.stringify({
+                            popup_id: popup.id,
+                            timestamp: Date.now(),
+                            lead: profile?.lead || null,
+                            visitor_id: profile?.visitor_id || null,
+                            session_id: profile?.session_id || null
+                        }),
                         keepalive: true,
                     }).catch(() => { /* silencia — não bloqueia UX */ });
                     track('popup_webhook', { popup_id: popup.id, url: action.value });

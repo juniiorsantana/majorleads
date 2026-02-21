@@ -9,6 +9,7 @@ import { initIdentity, isOptedOut, setOptOut, clearOptOut, saveProfile } from '.
 import { collectSession } from './session';
 import { fetchConfig, invalidateConfig } from './config';
 import { enqueue, flush, setupBeforeUnloadFlush } from './queue';
+import { fetchIpEnrichment } from '../network/enrichment';
 import { LeadSenseSDK, LeadProfile, LeadSenseEvent, Popup, SessionData } from './types';
 import { initScrollCollector } from '../collectors/scroll';
 import { initClickCollector } from '../collectors/clicks';
@@ -105,6 +106,23 @@ function identify(data: Partial<LeadProfile['lead']> & Record<string, unknown>):
     profile.identified = true;
     saveProfile(profile);
     track('lead_identified', { ...data });
+
+    // Dispara webhook backend via edge function de identificação
+    const payload = {
+        token,
+        visitor_id: profile.visitor_id,
+        session_id: profile.session_id,
+        lead: profile.lead,
+        ...data // injects popup_id, utm parameters, etc.
+    };
+
+    fetch('https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/identify-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true,
+    }).catch(err => log('Failed to identify-lead', err));
+
     onIdentifyCallback?.(profile.lead);
 }
 
@@ -127,7 +145,7 @@ function buildSDK(): LeadSenseSDK {
         isIdentified: () => profile?.identified ?? false,
         getProfile: () => profile,
         optOut: () => { setOptOut(); flush(); log('Opt-out ativado'); },
-        optIn: () => { clearOptOut(); log('Opt-in ativado'); },
+        optIn: () => { clearOptOut(); localStorage.setItem('_ls_optin', '1'); log('Opt-in ativado'); initIdentity(); },
         onIdentify: (cb) => { onIdentifyCallback = cb; },
     };
 
@@ -150,6 +168,12 @@ async function init(): Promise<void> {
     if (!token) {
         console.warn('[LeadSense] Token não encontrado. Adicione data-token ao script.');
         return;
+    }
+
+    const privacyMode = scriptEl?.getAttribute('data-privacy') || 'standard';
+    if (privacyMode === 'strict' && !isOptedOut() && localStorage.getItem('_ls_optin') !== '1') {
+        log('Modo de privacidade Strict: Iniciando em opt-out. Aguardando LeadSense.optIn().');
+        setOptOut();
     }
 
     if (isOptedOut()) { log('Opt-out ativo. Nenhum dado coletado.'); return; }
@@ -178,8 +202,29 @@ async function init(): Promise<void> {
             os: session.os,
             browser: session.browser,
         });
-        // Trigger page_load para popups
-        evaluateTriggers({ type: 'page_view' });
+
+        // Enriquecimento IP (Assíncrono)
+        fetchIpEnrichment(token).then((ipData) => {
+            if (ipData) {
+                if (sessionData) {
+                    sessionData.country = ipData.country;
+                    sessionData.state = ipData.state;
+                    sessionData.city = ipData.city;
+                    sessionData.is_bot = ipData.is_bot;
+                }
+
+                if (ipData.is_bot) {
+                    log('Bot detectado via IP — desativando popups.');
+                    activePopups = []; // Limpa popups ativos para bots
+                } else {
+                    // Trigger page_view original (adiado até termos o IP para evitar popups exibidos para bots muito rápidos)
+                    evaluateTriggers({ type: 'page_view' });
+                }
+            } else {
+                // Se falhou o enrich, segue normalmente
+                evaluateTriggers({ type: 'page_view' });
+            }
+        });
     }, 'collectSession');
 
     let getMaxScrollFn = () => 0;

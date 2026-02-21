@@ -12,7 +12,7 @@ serve(async (req) => {
         }
 
         const payload = await req.json()
-        const { token, visitor_id, session_id, lead } = payload
+        const { token, visitor_id, session_id, lead, popup_id } = payload
 
         if (!token || !visitor_id) {
             return new Response(JSON.stringify({ error: 'Missing token or visitor_id' }), {
@@ -29,7 +29,7 @@ serve(async (req) => {
         // Validate token (site_id)
         const { data: site, error: siteError } = await supabase
             .from('sites')
-            .select('id')
+            .select('id, webhook_url, webhook_active')
             .eq('id', token)
             .single()
 
@@ -67,6 +67,7 @@ serve(async (req) => {
             utm_medium: payload.utm_medium || null,
             utm_campaign: payload.utm_campaign || null,
             device_type: payload.device_type || null,
+            popup_id: popup_id || null,
         }
 
         let result
@@ -98,6 +99,31 @@ serve(async (req) => {
             if (error) throw error
             result = data
         }
+
+        // ─── WEBHOOK OUTBOUND ──────────────────────────────────────
+        if (site.webhook_active && site.webhook_url) {
+            const webhookPayload = {
+                event: 'lead_identified',
+                visitor_id,
+                session_id,
+                timestamp: new Date().toISOString(),
+                lead: result,
+                metadata: {
+                    ip: ip || null,
+                    popup_id: popup_id || null
+                }
+            }
+
+            // Fire and forget so we don't block the response
+            fetch(site.webhook_url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(webhookPayload)
+            }).catch(err => {
+                console.error("[Webhook Error] Failed to send webhook", err)
+            })
+        }
+        // ───────────────────────────────────────────────────────────
 
         return new Response(JSON.stringify({ success: true, lead: result }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

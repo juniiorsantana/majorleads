@@ -7,8 +7,8 @@ import { Overview } from './pages/Overview';
 import { Leads } from './pages/Leads';
 import { LeadProfile } from './pages/LeadProfile';
 import { Popups } from './pages/Popups';
-import { PopupEditor } from './pages/PopupEditor';
 import { Reports } from './pages/Reports';
+import { PopupReport } from './pages/PopupReport';
 import { Settings } from './pages/Settings';
 import { WebhookSettings } from './pages/WebhookSettings';
 import { Onboarding } from './pages/Onboarding';
@@ -18,6 +18,7 @@ import { Cadastro } from './pages/Cadastro';
 import { RecuperarSenha } from './pages/RecuperarSenha';
 import { NovaSenha } from './pages/NovaSenha';
 import { LandingPage } from './pages/LandingPage';
+import { PopupEditor } from './pages/PopupEditor';
 
 const App: React.FC = () => {
   return (
@@ -46,6 +47,7 @@ const App: React.FC = () => {
                     <Route path="/crm" element={<CRM />} />
                     <Route path="/popups" element={<Popups />} />
                     <Route path="/reports" element={<Reports />} />
+                    <Route path="/reports/popups/:id" element={<PopupReport />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/settings/webhook" element={<WebhookSettings />} />
                     <Route path="/onboarding" element={<Onboarding />} />

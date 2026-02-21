@@ -505,7 +505,7 @@ export const PopupEditor: React.FC = () => {
 
         if (error) throw error;
         setPopupId(data.id);
-        navigate(`/dashboard/popups/editor/${data.id}`, { replace: true });
+        navigate(`/popups/editor/${data.id}`, { replace: true });
       } else {
         // Já existe: apenas atualizar
         const { error } = await supabase
