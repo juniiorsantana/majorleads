@@ -5,6 +5,7 @@ import { LeadSenseEvent } from './types';
 const BATCH_SIZE = 10;
 const FLUSH_INTERVAL_MS = 5000;
 const BASE_URL = 'https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdheHF1bWVwamZiZmF4a2xla3FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MTM1MDIsImV4cCI6MjA4NzA4OTUwMn0.GxpK2m9OGYxGOZZOLDOT6DIqoyGSHRRVqPjnGxQTRm4';
 
 let queue: LeadSenseEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -27,9 +28,13 @@ export function flush(): void {
 
     // Usa Beacon API primeiro (funciona mesmo no beforeunload)
     if (navigator.sendBeacon) {
+        const blob = new Blob(
+            [JSON.stringify({ events: batch })],
+            { type: 'application/json' }
+        );
         const success = navigator.sendBeacon(
-            `${BASE_URL}/track-events`,
-            JSON.stringify({ events: batch })
+            `${BASE_URL}/track-events?apikey=${SUPABASE_ANON_KEY}`,
+            blob
         );
         if (success) return;
     }
@@ -45,7 +50,10 @@ async function sendWithRetry(events: LeadSenseEvent[], attempt = 0): Promise<voi
     try {
         await fetch(`${BASE_URL}/track-events`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+            },
             body: JSON.stringify({ events }),
             keepalive: true,
         });

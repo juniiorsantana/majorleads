@@ -10,6 +10,7 @@ import { IpData } from '../core/types';
 // Based on init.ts, it seems there's a convention. Let's look at config.ts.
 
 const ENRICH_IP_ENDPOINT = 'https://gaxqumepjfbfaxklekqq.supabase.co/functions/v1/enrich-ip';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdheHF1bWVwamZiZmF4a2xla3FxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MTM1MDIsImV4cCI6MjA4NzA4OTUwMn0.GxpK2m9OGYxGOZZOLDOT6DIqoyGSHRRVqPjnGxQTRm4';
 
 /**
  * Fetches IP enrichment data from the LeadSense backend
@@ -21,7 +22,7 @@ export async function fetchIpEnrichment(token: string): Promise<IpData | null> {
         const response = await fetch(ENRICH_IP_ENDPOINT, {
             method: 'GET',
             headers: {
-                'Authorization': `Bearer ${token}`, // or X-LS-Token depending on backend spec
+                'apikey': SUPABASE_ANON_KEY,
                 'X-LS-Token': token,
             },
         });
