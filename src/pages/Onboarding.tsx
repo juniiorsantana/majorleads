@@ -183,7 +183,7 @@ export const Onboarding: React.FC = () => {
 
   const copyCode = () => {
     navigator.clipboard.writeText(
-      `<script src="https://cdn.majorleads.io/v1/tracker.js" data-token="pk_live_ABC123XYZ789" async></script>`
+      `<script src="https://tracker.majorhub.com.br/tracker.js" data-token="pk_live_ABC123XYZ789" async></script>`
     ).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
@@ -352,7 +352,7 @@ export const Onboarding: React.FC = () => {
                       <code>
                         <span className="text-zinc-500">{'<!-- MajorLeads Tracker -->'}</span>{'\n'}
                         <span className="text-sky-400">{'<script'}</span>{'\n'}
-                        {'  '}<span className="text-blue-300">src</span>=<span className="text-emerald-400">"https://cdn.majorleads.io/v1/tracker.js"</span>{'\n'}
+                        {'  '}<span className="text-blue-300">src</span>=<span className="text-emerald-400">"https://tracker.majorhub.com.br/tracker.js"</span>{'\n'}
                         {'  '}<span className="text-blue-300">data-token</span>=<span className="text-emerald-400">"pk_live_ABC123XYZ789"</span>{'\n'}
                         {'  '}<span className="text-blue-300">async</span><span className="text-sky-400">{'>'}</span>{'\n'}
                         <span className="text-sky-400">{'</script>'}</span>
