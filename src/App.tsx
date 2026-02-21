@@ -12,6 +12,7 @@ import { PopupReport } from './pages/PopupReport';
 import { Settings } from './pages/Settings';
 import { WebhookSettings } from './pages/WebhookSettings';
 import { Onboarding } from './pages/Onboarding';
+import { Sites } from './pages/Sites';
 import { CRM } from './pages/CRM';
 import { Login } from './pages/Login';
 import { Cadastro } from './pages/Cadastro';
@@ -50,6 +51,7 @@ const App: React.FC = () => {
                     <Route path="/reports/popups/:id" element={<PopupReport />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/settings/webhook" element={<WebhookSettings />} />
+                    <Route path="/sites" element={<Sites />} />
                     <Route path="/onboarding" element={<Onboarding />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

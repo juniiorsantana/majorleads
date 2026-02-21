@@ -246,7 +246,7 @@ export const Onboarding: React.FC = () => {
 
   const finishOnboarding = () => {
     localStorage.setItem('onboarding_complete', 'true');
-    navigate('/dashboard');
+    navigate('/dashboard/sites');
   };
 
   return (

@@ -42,7 +42,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const accountItems = [
     { icon: Settings, label: 'Configurações', path: '/dashboard/settings' },
-    { icon: Code2, label: 'Instalação', path: '/dashboard/onboarding' },
+    { icon: Code2, label: 'Instalação', path: '/dashboard/sites' },
   ];
 
   const displayName = profile?.full_name || 'Usuário';
