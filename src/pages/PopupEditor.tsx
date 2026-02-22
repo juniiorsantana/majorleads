@@ -41,8 +41,13 @@ import {
 
 type TriggerType = 'exit_intent' | 'time_on_page' | 'scroll_depth' | 'inactivity';
 type ActionType = 'whatsapp' | 'redirect' | 'webhook' | 'close' | 'success_message';
-type PopupType = 'modal' | 'slide-in' | 'top-bar' | 'toast';
+type PopupType = 'modal' | 'slide-in' | 'top-bar' | 'toast' | 'ios-toast';
 type LayerType = 'hero_image' | 'heading' | 'text' | 'button' | 'avatar_image' | 'input_field';
+
+export interface IosToastMessage {
+  title: string;
+  text: string;
+}
 
 interface Layer {
   id: string;
@@ -190,6 +195,31 @@ const initialTopBarLayers: Layer[] = [
   }
 ];
 
+const initialIosToastLayers: Layer[] = [
+  {
+    id: 'iot-layer-avatar',
+    type: 'avatar_image',
+    label: 'Foto do Atendente',
+    icon: ImageIcon,
+    // Add default fallback props so they always exist even if src is empty
+    props: { src: '', size: 44, fallbackLetter: 'A', fallbackColor: '#6366f1' }
+  },
+  {
+    id: 'iot-layer-title',
+    type: 'heading',
+    label: 'Título Principal',
+    icon: Type,
+    props: { text: 'Atendimento Online', fontSize: 14, fontWeight: 'bold', color: '#0b1225', align: 'left' }
+  },
+  {
+    id: 'iot-layer-desc',
+    type: 'text',
+    label: 'Texto Descrição',
+    icon: AlignLeft,
+    props: { text: 'Clique para falar com um especialista agora.', fontSize: 13, color: '#4a5568', align: 'left' }
+  },
+];
+
 export const PopupEditor: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -203,6 +233,14 @@ export const PopupEditor: React.FC = () => {
   const [popupName, setPopupName] = useState("Oferta de Saída - Mobile");
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [popupType, setPopupType] = useState<PopupType>('modal');
+
+  const [iosToastMessages, setIosToastMessages] = useState<IosToastMessage[]>([
+    { title: 'Atendimento Online', text: 'Olá! Posso te ajudar com alguma dúvida?' },
+    { title: 'Especialista', text: 'Fale agora com nosso time.' },
+  ]);
+  const [iosToastIntervalMs, setIosToastIntervalMs] = useState<number>(7000);
+  const [iosToastAutoHideMs, setIosToastAutoHideMs] = useState<number>(4500);
+  const [iosToastLoopCount, setIosToastLoopCount] = useState<number>(0); // 0 = infinite
 
   // Layers & Selection
   const [layers, setLayers] = useState<Layer[]>(initialLayers);
@@ -354,6 +392,18 @@ export const PopupEditor: React.FC = () => {
             if (data.layers) setLayers(rehydrateLayerIcons(data.layers));
             if (data.trigger_config) setTriggerConfig(data.trigger_config);
             if (data.actions_config) setActions(data.actions_config);
+            if (data.ios_toast_config) {
+              if (data.ios_toast_config.messages) {
+                // Ensure backward compatibility if they have simple strings from previous version
+                const formattedMessages = data.ios_toast_config.messages.map((m: any) =>
+                  typeof m === 'string' ? { title: 'Atendimento Online', text: m } : m
+                );
+                setIosToastMessages(formattedMessages);
+              }
+              if (data.ios_toast_config.intervalMs) setIosToastIntervalMs(data.ios_toast_config.intervalMs);
+              if (data.ios_toast_config.autoHideMs) setIosToastAutoHideMs(data.ios_toast_config.autoHideMs);
+              if (data.ios_toast_config.loopCount !== undefined) setIosToastLoopCount(data.ios_toast_config.loopCount);
+            }
             setIsPublished(data.status === 'active');
           }
         } else {
@@ -424,7 +474,10 @@ export const PopupEditor: React.FC = () => {
     if (type === 'top-bar') {
       setLayers(initialTopBarLayers);
       setSelectedLayerId('tb-layer-1');
-    } else if (popupType === 'top-bar') {
+    } else if (type === 'ios-toast') {
+      setLayers(initialIosToastLayers);
+      setSelectedLayerId('iot-layer-title');
+    } else if (popupType === 'top-bar' || popupType === 'ios-toast') {
       setLayers(initialLayers);
       setSelectedLayerId('layer-4');
     }
@@ -506,6 +559,12 @@ export const PopupEditor: React.FC = () => {
             layers,
             trigger_config: triggerConfig,
             actions_config: actions,
+            ios_toast_config: {
+              messages: iosToastMessages,
+              intervalMs: iosToastIntervalMs,
+              autoHideMs: iosToastAutoHideMs,
+              loopCount: iosToastLoopCount
+            }
           }])
           .select()
           .single();
@@ -523,6 +582,12 @@ export const PopupEditor: React.FC = () => {
             layers: layers,
             trigger_config: triggerConfig,
             actions_config: actions,
+            ios_toast_config: {
+              messages: iosToastMessages,
+              intervalMs: iosToastIntervalMs,
+              autoHideMs: iosToastAutoHideMs,
+              loopCount: iosToastLoopCount
+            },
             updated_at: new Date().toISOString()
           })
           .eq('id', popupId);
@@ -569,6 +634,12 @@ export const PopupEditor: React.FC = () => {
             layers,
             trigger_config: triggerConfig,
             actions_config: actions,
+            ios_toast_config: {
+              messages: iosToastMessages,
+              intervalMs: iosToastIntervalMs,
+              autoHideMs: iosToastAutoHideMs,
+              loopCount: iosToastLoopCount
+            },
             published_at: new Date().toISOString(),
           }])
           .select()
@@ -588,6 +659,12 @@ export const PopupEditor: React.FC = () => {
             layers,
             trigger_config: triggerConfig,
             actions_config: actions,
+            ios_toast_config: {
+              messages: iosToastMessages,
+              intervalMs: iosToastIntervalMs,
+              autoHideMs: iosToastAutoHideMs,
+              loopCount: iosToastLoopCount
+            },
             status: 'active',
             published_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -934,6 +1011,8 @@ export const PopupEditor: React.FC = () => {
         return 'absolute top-0 left-0 w-full z-50 shadow-lg animate-in slide-in-from-top-full duration-300';
       case 'toast':
         return 'absolute top-6 right-6 z-50 shadow-xl animate-in slide-in-from-top-5 fade-in duration-300';
+      case 'ios-toast':
+        return 'hidden';
     }
   };
 
@@ -1067,7 +1146,8 @@ export const PopupEditor: React.FC = () => {
                     { id: 'modal', label: 'Modal Central', icon: LayoutTemplate, desc: 'Clássico, alta conversão' },
                     { id: 'slide-in', label: 'Slide-in', icon: Layers, desc: 'Discreto, canto inferior' },
                     { id: 'top-bar', label: 'Barra Superior', icon: Monitor, desc: 'Avisos e promoções' },
-                    { id: 'toast', label: 'Notificação', icon: Bell, desc: 'Sugestão sutil' }
+                    { id: 'toast', label: 'Notificação', icon: Bell, desc: 'Sugestão sutil' },
+                    { id: 'ios-toast', label: 'iOS Toast', icon: Bell, desc: 'Notificação flutuante no topo' }
                   ].map((type) => (
                     <button
                       key={type.id}
@@ -1089,84 +1169,104 @@ export const PopupEditor: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Camadas</h3>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowAddLayerMenu(prev => !prev)}
-                      className="text-brand-600 hover:text-brand-800 text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md hover:bg-brand-50 transition-colors"
-                    >
-                      <Plus size={14} /> Adicionar
-                    </button>
-                    {showAddLayerMenu && (
-                      <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                        <div className="p-1">
-                          {[
-                            { type: 'heading' as LayerType, icon: Type, label: 'Título' },
-                            { type: 'text' as LayerType, icon: AlignLeft, label: 'Parágrafo' },
-                            { type: 'button' as LayerType, icon: MousePointer2, label: 'Botão CTA' },
-                            { type: 'hero_image' as LayerType, icon: ImageIcon, label: 'Imagem' },
-                            { type: 'input_field' as LayerType, icon: User, label: 'Campo: Nome' },
-                            { type: 'input_field' as LayerType, icon: Mail, label: 'Campo: E-mail', fieldType: 'email' },
-                            { type: 'input_field' as LayerType, icon: Phone, label: 'Campo: WhatsApp', fieldType: 'phone' },
-                          ].map((item) => (
-                            <button
-                              key={item.label}
-                              onClick={() => {
-                                if (item.fieldType) {
-                                  const id = `layer-${Date.now()}`;
-                                  const ph = item.fieldType === 'email' ? 'seu@email.com' : '(11) 99999-9999';
-                                  const lb = item.fieldType === 'email' ? 'E-mail' : 'WhatsApp';
-                                  setLayers(prev => [...prev, { id, type: 'input_field', label: `Campo: ${lb}`, icon: item.icon, props: { fieldType: item.fieldType, placeholder: ph, label: lb, required: true } }]);
-                                  setSelectedLayerId(id);
-                                  setShowAddLayerMenu(false);
-                                  setSaveStatus('unsaved');
-                                } else {
-                                  addLayer(item.type);
-                                }
-                              }}
-                              className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
-                            >
-                              <item.icon size={14} className="text-zinc-400" /> {item.label}
-                            </button>
-                          ))}
+              {popupType === 'ios-toast' ? (
+                <div className="mt-4">
+                  <button
+                    onClick={() => setSelectedLayerId('iot-config')}
+                    className={`w-full flex items-center gap-3 p-3 border rounded-xl text-left transition-all duration-200 ${selectedLayerId === 'iot-config'
+                        ? 'border-brand-500 bg-brand-50 shadow-sm ring-1 ring-brand-200'
+                        : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                      }`}
+                  >
+                    <div className={`p-2 rounded-lg ${selectedLayerId === 'iot-config' ? 'bg-white text-brand-600 shadow-sm' : 'bg-zinc-100 text-zinc-500'}`}>
+                      <Settings size={18} />
+                    </div>
+                    <div>
+                      <span className={`block text-xs font-bold ${selectedLayerId === 'iot-config' ? 'text-brand-900' : 'text-zinc-700'}`}>Configurar Toast</span>
+                      <span className="text-[10px] text-zinc-500 leading-tight block">Mensagens, avatar e timing</span>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Camadas</h3>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowAddLayerMenu(prev => !prev)}
+                        className="text-brand-600 hover:text-brand-800 text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md hover:bg-brand-50 transition-colors"
+                      >
+                        <Plus size={14} /> Adicionar
+                      </button>
+                      {showAddLayerMenu && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-zinc-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                          <div className="p-1">
+                            {[
+                              { type: 'heading' as LayerType, icon: Type, label: 'Título' },
+                              { type: 'text' as LayerType, icon: AlignLeft, label: 'Parágrafo' },
+                              { type: 'button' as LayerType, icon: MousePointer2, label: 'Botão CTA' },
+                              { type: 'hero_image' as LayerType, icon: ImageIcon, label: 'Imagem' },
+                              { type: 'input_field' as LayerType, icon: User, label: 'Campo: Nome' },
+                              { type: 'input_field' as LayerType, icon: Mail, label: 'Campo: E-mail', fieldType: 'email' },
+                              { type: 'input_field' as LayerType, icon: Phone, label: 'Campo: WhatsApp', fieldType: 'phone' },
+                            ].map((item) => (
+                              <button
+                                key={item.label}
+                                onClick={() => {
+                                  if (item.fieldType) {
+                                    const id = `layer-${Date.now()}`;
+                                    const ph = item.fieldType === 'email' ? 'seu@email.com' : '(11) 99999-9999';
+                                    const lb = item.fieldType === 'email' ? 'E-mail' : 'WhatsApp';
+                                    setLayers(prev => [...prev, { id, type: 'input_field', label: `Campo: ${lb}`, icon: item.icon, props: { fieldType: item.fieldType, placeholder: ph, label: lb, required: true } }]);
+                                    setSelectedLayerId(id);
+                                    setShowAddLayerMenu(false);
+                                    setSaveStatus('unsaved');
+                                  } else {
+                                    addLayer(item.type);
+                                  }
+                                }}
+                                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
+                              >
+                                <item.icon size={14} className="text-zinc-400" /> {item.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {layers.map((layer, index) => (
+                      <div
+                        key={layer.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, layer.id)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLayerId(layer.id)}
+                        className={`group flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all ${selectedLayerId === layer.id
+                          ? 'bg-brand-50 border-brand-200 shadow-sm border-l-4 border-l-brand-600'
+                          : 'bg-white border-zinc-200 hover:border-zinc-300'
+                          }`}
+                      >
+                        <span className="text-zinc-300 cursor-grab active:cursor-grabbing hover:text-zinc-500">
+                          <GripVertical size={14} />
+                        </span>
+                        {layer.icon && React.createElement(layer.icon, { size: 16, className: selectedLayerId === layer.id ? 'text-brand-500' : 'text-zinc-400' })}
+                        <span className={`text-sm flex-1 truncate ${selectedLayerId === layer.id ? 'text-brand-700 font-medium' : 'text-zinc-700'}`}>
+                          {layer.label}
+                        </span>
+                        <button
+                          onClick={(e) => deleteLayer(layer.id, e)}
+                          className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-opacity p-0.5 rounded hover:bg-red-50"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  {layers.map((layer, index) => (
-                    <div
-                      key={layer.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, layer.id)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => setSelectedLayerId(layer.id)}
-                      className={`group flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition-all ${selectedLayerId === layer.id
-                        ? 'bg-brand-50 border-brand-200 shadow-sm border-l-4 border-l-brand-600'
-                        : 'bg-white border-zinc-200 hover:border-zinc-300'
-                        }`}
-                    >
-                      <span className="text-zinc-300 cursor-grab active:cursor-grabbing hover:text-zinc-500">
-                        <GripVertical size={14} />
-                      </span>
-                      {layer.icon && React.createElement(layer.icon, { size: 16, className: selectedLayerId === layer.id ? 'text-brand-500' : 'text-zinc-400' })}
-                      <span className={`text-sm flex-1 truncate ${selectedLayerId === layer.id ? 'text-brand-700 font-medium' : 'text-zinc-700'}`}>
-                        {layer.label}
-                      </span>
-                      <button
-                        onClick={(e) => deleteLayer(layer.id, e)}
-                        className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 transition-opacity p-0.5 rounded hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           )}
         </aside>
@@ -1303,6 +1403,110 @@ export const PopupEditor: React.FC = () => {
                   {/* Overlay tint so the popup pops */}
                   <div className="absolute inset-0 bg-zinc-900/5"></div>
                 </div>
+
+                {/* --- iOS Toast Independent Rendering --- */}
+                {popupType === 'ios-toast' && (() => {
+                  const avatarLayer = layers.find(l => l.id === 'iot-layer-avatar');
+                  const titleLayer = layers.find(l => l.id === 'iot-layer-title');
+                  const msgLayer = layers.find(l => l.id === 'iot-layer-desc');
+
+                  return (
+                    <div
+                      style={{
+                        position: 'absolute', top: 12, left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 'min(90%, 400px)', zIndex: 50,
+                      }}
+                    >
+                      <div style={{
+                        display: 'grid', gridTemplateColumns: '44px 1fr 28px',
+                        gap: 10, alignItems: 'center',
+                        padding: '12px 14px',
+                        background: 'rgba(255,255,255,0.82)',
+                        backdropFilter: 'saturate(180%) blur(14px)',
+                        WebkitBackdropFilter: 'saturate(180%) blur(14px)',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        borderRadius: 18,
+                        boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                      }}>
+
+                        {/* Avatar */}
+                        <div
+                          onClick={(e) => { e.stopPropagation(); setSelectedLayerId('iot-layer-avatar'); }}
+                          style={{
+                            width: 44, height: 44, borderRadius: '50%',
+                            overflow: 'hidden', border: '1px solid rgba(0,0,0,0.08)',
+                            background: avatarLayer?.props.src ? undefined : (avatarLayer?.props.fallbackColor || '#e9eefb'),
+                            display: 'grid', placeItems: 'center',
+                            fontSize: 16, fontWeight: 700, color: avatarLayer?.props.src ? undefined : (avatarLayer?.props.fallbackTextColor || '#0b1225'), cursor: 'pointer',
+                            outline: selectedLayerId === 'iot-layer-avatar' ? '2px solid #6366f1' : undefined,
+                            outlineOffset: 2,
+                          }}
+                        >
+                          {avatarLayer?.props.src ? (
+                            <img src={avatarLayer.props.src} alt="avatar"
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : <span>{avatarLayer?.props.fallbackLetter || 'A'}</span>}
+                        </div>
+
+                        {/* Title + active message preview */}
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            onClick={(e) => { e.stopPropagation(); setSelectedLayerId('iot-layer-title'); }}
+                            style={{
+                              cursor: 'pointer',
+                              outline: selectedLayerId === 'iot-layer-title' ? '2px solid #6366f1' : undefined,
+                              outlineOffset: 2, borderRadius: 4,
+                            }}
+                          >
+                            <p style={{
+                              margin: 0, fontWeight: titleLayer?.props.fontWeight || 'bold',
+                              fontSize: titleLayer?.props.fontSize || 14,
+                              color: titleLayer?.props.color || '#0b1225',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                              {iosToastMessages[0]?.title || titleLayer?.props.text || 'Título'}
+                            </p>
+                          </div>
+                          <div
+                            onClick={(e) => { e.stopPropagation(); setSelectedLayerId('iot-layer-desc'); }}
+                            style={{
+                              cursor: 'pointer', marginTop: 2,
+                              outline: selectedLayerId === 'iot-layer-desc' ? '2px solid #6366f1' : undefined,
+                              outlineOffset: 2, borderRadius: 4,
+                            }}
+                          >
+                            <p style={{
+                              margin: 0, fontSize: msgLayer?.props.fontSize || 13,
+                              color: msgLayer?.props.color || '#4a5568',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                              {iosToastMessages[0]?.text || msgLayer?.props.text || 'Mensagem...'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Arrow */}
+                        <div style={{
+                          display: 'grid', placeItems: 'center', width: 28, height: 28,
+                          borderRadius: 9, border: '1px solid rgba(0,0,0,0.08)',
+                          background: 'rgba(0,0,0,0.05)',
+                        }}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14, opacity: 0.7 }}>
+                            <path d="M13.172 12L8.222 7.05l1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
+                          </svg>
+                        </div>
+
+                      </div>
+                      {/* Badge de preview */}
+                      <p style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#a1a1aa' }}>
+                        Preview — {iosToastMessages.length} mensagem{iosToastMessages.length !== 1 ? 's' : ''} configurada{iosToastMessages.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* The Popup Container Logic */}
                 <div className={`${getPopupTypeStyles()}`}>
@@ -1743,7 +1947,168 @@ export const PopupEditor: React.FC = () => {
               </div>
 
               <div className="p-5">
-                {renderLayerProperties()}
+                {/* iOS Toast: full config panel */}
+                {popupType === 'ios-toast' ? (
+                  <div className="space-y-6">
+
+                    {/* --- Avatar Section --- */}
+                    <div>
+                      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+                        Foto do Atendente
+                      </h3>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div
+                          className="w-12 h-12 rounded-full overflow-hidden border border-zinc-200 flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: !layers.find(l => l.id === 'iot-layer-avatar')?.props.src
+                              ? (layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackColor || '#6366f1')
+                              : '#f4f4f5',
+                            color: '#fff', fontWeight: 700, fontSize: 18,
+                          }}
+                        >
+                          {layers.find(l => l.id === 'iot-layer-avatar')?.props.src ? (
+                            <img src={layers.find(l => l.id === 'iot-layer-avatar')!.props.src} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackLetter || 'A'
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <label className="text-xs font-medium text-zinc-900 mb-1 block">URL da Foto</label>
+                          <input
+                            type="text"
+                            value={layers.find(l => l.id === 'iot-layer-avatar')?.props.src || ''}
+                            placeholder="Deixe vazio para usar letra"
+                            onChange={(e) => handleLayerChange('iot-layer-avatar', { src: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 text-zinc-600"
+                          />
+                        </div>
+                      </div>
+                      {!layers.find(l => l.id === 'iot-layer-avatar')?.props.src && (
+                        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1">
+                          <div className="flex-1">
+                            <label className="text-xs font-medium text-zinc-900 mb-1 block">Letra</label>
+                            <input
+                              type="text" maxLength={1}
+                              value={layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackLetter || 'A'}
+                              onChange={(e) => handleLayerChange('iot-layer-avatar', { fallbackLetter: e.target.value.toUpperCase() })}
+                              className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 uppercase text-center font-bold"
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <label className="text-xs font-medium text-zinc-900 mb-1 block">Cor de Fundo</label>
+                            <div className="flex items-center gap-2">
+                              <div className="relative shrink-0">
+                                <input type="color"
+                                  value={layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackColor || '#6366f1'}
+                                  onChange={(e) => handleLayerChange('iot-layer-avatar', { fallbackColor: e.target.value })}
+                                  className="w-8 h-8 p-0 border-0 rounded-lg cursor-pointer absolute opacity-0 inset-0"
+                                />
+                                <div className="w-8 h-8 rounded-lg border border-zinc-200 pointer-events-none"
+                                  style={{ backgroundColor: layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackColor || '#6366f1' }}
+                                />
+                              </div>
+                              <input type="text"
+                                value={layers.find(l => l.id === 'iot-layer-avatar')?.props.fallbackColor || '#6366f1'}
+                                onChange={(e) => handleLayerChange('iot-layer-avatar', { fallbackColor: e.target.value })}
+                                className="w-full px-2 py-2 rounded-lg border border-zinc-300 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 uppercase"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="h-px bg-zinc-100" />
+
+                    {/* --- Mensagens Rotativas --- */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                          Mensagens Rotativas
+                        </h3>
+                        <button
+                          onClick={() => setIosToastMessages(prev => [...prev, { title: 'Novo Título', text: 'Sua mensagem aqui...' }])}
+                          className="text-brand-600 hover:text-brand-800 text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md hover:bg-brand-50 transition-colors"
+                        >
+                          <Plus size={13} /> Adicionar
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-zinc-400 mb-3 leading-relaxed">
+                        Cada notificação terá seu próprio título e texto.
+                      </p>
+                      <div className="space-y-3">
+                        {iosToastMessages.map((msg, idx) => (
+                          <div key={idx} className="flex items-start gap-2 bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+                            <span className="mt-2 w-6 h-6 rounded-full bg-white border border-zinc-200 flex items-center justify-center text-[10px] font-bold text-zinc-500 shrink-0 shadow-sm">
+                              {idx + 1}
+                            </span>
+                            <div className="flex-1 space-y-2">
+                              <div>
+                                <label className="text-[10px] font-semibold text-zinc-400 uppercase mb-1 block">Título</label>
+                                <input type="text" value={msg.title || ''} placeholder="Ex: Junior santana:"
+                                  onChange={(e) => { const u = [...iosToastMessages]; u[idx] = { ...u[idx], title: e.target.value }; setIosToastMessages(u); setSaveStatus('unsaved'); }}
+                                  className="w-full px-2.5 py-1.5 rounded-md border border-zinc-200 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-semibold text-zinc-400 uppercase mb-1 block">Mensagem</label>
+                                <input type="text" value={msg.text || ''} placeholder="Ex: Olá, Seja bem vindo"
+                                  onChange={(e) => { const u = [...iosToastMessages]; u[idx] = { ...u[idx], text: e.target.value }; setIosToastMessages(u); setSaveStatus('unsaved'); }}
+                                  className="w-full px-2.5 py-1.5 rounded-md border border-zinc-200 text-xs text-zinc-600 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                                />
+                              </div>
+                            </div>
+                            {iosToastMessages.length > 1 && (
+                              <button onClick={() => setIosToastMessages(prev => prev.filter((_, i) => i !== idx))}
+                                className="mt-2 text-zinc-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50">
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-100" />
+
+                    {/* --- Temporização --- */}
+                    <div>
+                      <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Temporização</h3>
+                      <div className="space-y-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-medium text-zinc-900">Intervalo entre mensagens</label>
+                            <span className="text-xs text-zinc-500">{(iosToastIntervalMs / 1000).toFixed(0)}s</span>
+                          </div>
+                          <input type="range" min="3000" max="20000" step="500" value={iosToastIntervalMs}
+                            onChange={(e) => { setIosToastIntervalMs(Number(e.target.value)); setSaveStatus('unsaved'); }}
+                            className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-brand-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-medium text-zinc-900">Duração de cada notificação</label>
+                            <span className="text-xs text-zinc-500">{(iosToastAutoHideMs / 1000).toFixed(1)}s</span>
+                          </div>
+                          <input type="range" min="2000" max="10000" step="500" value={iosToastAutoHideMs}
+                            onChange={(e) => { setIosToastAutoHideMs(Number(e.target.value)); setSaveStatus('unsaved'); }}
+                            className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-brand-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-xs font-medium text-zinc-900">Repetições (Ciclos)</label>
+                            <span className="text-xs text-zinc-500 px-2 bg-zinc-100 rounded">{iosToastLoopCount === 0 ? 'Infinito' : `${iosToastLoopCount}x`}</span>
+                          </div>
+                          <input type="range" min="0" max="10" step="1" value={iosToastLoopCount}
+                            onChange={(e) => { setIosToastLoopCount(Number(e.target.value)); setSaveStatus('unsaved'); }}
+                            className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-brand-600" />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                ) : (
+                  renderLayerProperties()
+                )}
               </div>
             </>
           )}
