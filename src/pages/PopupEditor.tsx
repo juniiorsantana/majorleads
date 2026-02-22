@@ -230,7 +230,7 @@ export const PopupEditor: React.FC = () => {
 
   // --- State Management ---
   const [activeStep, setActiveStep] = useState<1 | 2 | 3>(2);
-  const [popupName, setPopupName] = useState("Oferta de Saída - Mobile");
+  const [popupName, setPopupName] = useState(id ? "Oferta de Saída - Mobile" : "Novo Popup");
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [popupType, setPopupType] = useState<PopupType>('modal');
 
@@ -243,8 +243,9 @@ export const PopupEditor: React.FC = () => {
   const [iosToastLoopCount, setIosToastLoopCount] = useState<number>(0); // 0 = infinite
 
   // Layers & Selection
-  const [layers, setLayers] = useState<Layer[]>(initialLayers);
-  const [selectedLayerId, setSelectedLayerId] = useState<string | null>('layer-4');
+  const isNew = !id;
+  const [layers, setLayers] = useState<Layer[]>(isNew ? [] : initialLayers);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(isNew ? null : 'layer-4');
   const [showAddLayerMenu, setShowAddLayerMenu] = useState(false);
 
   // Saving & Status
@@ -421,6 +422,9 @@ export const PopupEditor: React.FC = () => {
   }, [user]); // Run once on mount when user is ready (and id/popupId handled inside)
 
 
+  // Helper: strip non-serializable icon from layers before persisting
+  const serializeLayers = (src: Layer[]) => src.map(({ icon, ...rest }) => rest);
+
   // 2. Auto-Save
   useEffect(() => {
     if (!popupId || isLoading) return;
@@ -435,9 +439,15 @@ export const PopupEditor: React.FC = () => {
             .update({
               name: popupName,
               type: popupType,
-              layers: layers,
+              layers: serializeLayers(layers),
               trigger_config: triggerConfig,
               actions_config: actions,
+              ios_toast_config: {
+                messages: iosToastMessages,
+                intervalMs: iosToastIntervalMs,
+                autoHideMs: iosToastAutoHideMs,
+                loopCount: iosToastLoopCount
+              },
               updated_at: new Date().toISOString()
             })
             .eq('id', popupId);
@@ -455,10 +465,9 @@ export const PopupEditor: React.FC = () => {
     };
 
     const interval = setInterval(saveToSupabase, 30000); // Check every 30s
-    // Also debounce save on unmount/change? For now stick to interval + manual triggers to match request
 
     return () => clearInterval(interval);
-  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, popupId, isLoading]);
+  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, iosToastMessages, iosToastIntervalMs, iosToastAutoHideMs, iosToastLoopCount, popupId, isLoading]);
 
 
   // Mark as unsaved on changes
@@ -556,7 +565,7 @@ export const PopupEditor: React.FC = () => {
             name: popupName,
             status: 'draft',
             type: popupType,
-            layers,
+            layers: serializeLayers(layers),
             trigger_config: triggerConfig,
             actions_config: actions,
             ios_toast_config: {
@@ -579,7 +588,7 @@ export const PopupEditor: React.FC = () => {
           .update({
             name: popupName,
             type: popupType,
-            layers: layers,
+            layers: serializeLayers(layers),
             trigger_config: triggerConfig,
             actions_config: actions,
             ios_toast_config: {
@@ -631,7 +640,7 @@ export const PopupEditor: React.FC = () => {
             name: popupName,
             status: 'active',
             type: popupType,
-            layers,
+            layers: serializeLayers(layers),
             trigger_config: triggerConfig,
             actions_config: actions,
             ios_toast_config: {
@@ -656,7 +665,7 @@ export const PopupEditor: React.FC = () => {
           .update({
             name: popupName,
             type: popupType,
-            layers,
+            layers: serializeLayers(layers),
             trigger_config: triggerConfig,
             actions_config: actions,
             ios_toast_config: {
@@ -1174,8 +1183,8 @@ export const PopupEditor: React.FC = () => {
                   <button
                     onClick={() => setSelectedLayerId('iot-config')}
                     className={`w-full flex items-center gap-3 p-3 border rounded-xl text-left transition-all duration-200 ${selectedLayerId === 'iot-config'
-                        ? 'border-brand-500 bg-brand-50 shadow-sm ring-1 ring-brand-200'
-                        : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
+                      ? 'border-brand-500 bg-brand-50 shadow-sm ring-1 ring-brand-200'
+                      : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50'
                       }`}
                   >
                     <div className={`p-2 rounded-lg ${selectedLayerId === 'iot-config' ? 'bg-white text-brand-600 shadow-sm' : 'bg-zinc-100 text-zinc-500'}`}>
@@ -1236,7 +1245,15 @@ export const PopupEditor: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {layers.map((layer, index) => (
+                    {layers.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center text-center py-8 px-3">
+                        <div className="w-10 h-10 rounded-lg bg-zinc-100 flex items-center justify-center mb-3">
+                          <Layers size={20} className="text-zinc-400" />
+                        </div>
+                        <p className="text-xs font-medium text-zinc-500 mb-1">Nenhuma camada</p>
+                        <p className="text-[10px] text-zinc-400 leading-relaxed">Clique em "Adicionar" acima para montar o popup</p>
+                      </div>
+                    ) : layers.map((layer, index) => (
                       <div
                         key={layer.id}
                         draggable
@@ -1613,6 +1630,15 @@ export const PopupEditor: React.FC = () => {
                     ) : (
                       /* === OTHER TYPES: Standard vertical layout === */
                       <div className="flex flex-col">
+                        {layers.length === 0 && (
+                          <div className="flex flex-col items-center justify-center text-center py-16 px-8">
+                            <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center mb-4">
+                              <Layers size={24} className="text-zinc-400" />
+                            </div>
+                            <p className="text-sm font-semibold text-zinc-500 mb-1">Popup vazio</p>
+                            <p className="text-xs text-zinc-400 leading-relaxed max-w-[220px]">Adicione camadas no painel esquerdo para montar o design do seu popup</p>
+                          </div>
+                        )}
                         {layers.map((layer) => {
                           const isSelected = selectedLayerId === layer.id;
                           const selectionStyle = isSelected ? 'ring-2 ring-brand-500 ring-offset-2' : 'hover:ring-2 hover:ring-brand-500/30 hover:ring-offset-1';
