@@ -229,6 +229,15 @@ async function init(): Promise<void> {
 
     let getMaxScrollFn = () => 0;
 
+    // Config de popups — carrega ANTES de iniciar os collectors para evitar race condition
+    try {
+        const cfg = await fetchConfig(token);
+        activePopups = cfg.popups.filter(p => p.status.toLowerCase() === 'active');
+        log('Config carregada:', activePopups.length, 'popups ativos');
+    } catch (e) {
+        log('Falha ao carregar config de popups:', e);
+    }
+
     // Scroll — atualiza scrollDepth para o engine
     safe(() => {
         const { cleanup, getMaxScroll } = initScrollCollector((evt, props) => {
@@ -268,13 +277,6 @@ async function init(): Promise<void> {
     }, { once: true });
 
     setupBeforeUnloadFlush();
-
-    // Config de popups
-    safe(async () => {
-        const cfg = await fetchConfig(token);
-        activePopups = cfg.popups.filter(p => p.status.toLowerCase() === 'active');
-        log('Config carregada:', activePopups.length, 'popups ativos');
-    }, 'fetchConfig');
 
     log('✅ Tracker pronto. visitor_id:', profile.visitor_id);
 }

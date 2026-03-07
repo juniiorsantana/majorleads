@@ -7,6 +7,25 @@ export interface Site {
     name: string | null;
 }
 
+export const getAllSites = async (userId: string): Promise<Site[]> => {
+    try {
+        const { data, error } = await supabase
+            .from('sites')
+            .select('id, user_id, domain, name')
+            .eq('user_id', userId)
+            .order('name', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching sites:', error);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.error('Exception in getAllSites:', err);
+        return [];
+    }
+};
+
 export const getOrCreateDefaultSite = async (userId: string): Promise<Site | null> => {
     try {
         // 1. Try to find an existing site

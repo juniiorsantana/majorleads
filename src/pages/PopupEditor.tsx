@@ -2,7 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { getOrCreateDefaultSite } from '../lib/sites';
+import { getOrCreateDefaultSite, getAllSites, Site } from '../lib/sites';
+import { usePlan } from '../hooks/usePlan';
+
 import {
   ArrowLeft,
   Cloud,
@@ -226,6 +228,7 @@ export const PopupEditor: React.FC = () => {
   const { user } = useAuth();
   const [popupId, setPopupId] = useState<string | null>(id || null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState<string | null>(null);
 
   // --- State Management ---
@@ -369,13 +372,9 @@ export const PopupEditor: React.FC = () => {
       try {
         setIsLoading(true);
 
-        // Ensure we have a site
-        const site = await getOrCreateDefaultSite(user.id);
-        if (!site) {
-          setShowToast({ message: 'Erro ao identificar o site. Tente novamente.', type: 'error' });
-          return;
-        }
-        setSiteId(site.id);
+        // Load all user sites for the selector
+        const userSites = await getAllSites(user.id);
+        setSites(userSites);
 
         if (popupId) {
           // Load existing
@@ -390,6 +389,7 @@ export const PopupEditor: React.FC = () => {
           if (data) {
             setPopupName(data.name);
             setPopupType(data.type as PopupType);
+            setSiteId(data.site_id);
             if (data.layers) setLayers(rehydrateLayerIcons(data.layers));
             if (data.trigger_config) setTriggerConfig(data.trigger_config);
             if (data.actions_config) setActions(data.actions_config);
@@ -408,7 +408,17 @@ export const PopupEditor: React.FC = () => {
             setIsPublished(data.status === 'active');
           }
         } else {
-          setSiteId(site.id); // apenas guarda o siteId, nada é criado no banco
+          // New popup: set default site to the first available or let them choose
+          if (userSites.length > 0) {
+            setSiteId(userSites[0].id);
+          } else {
+            // Guarantee at least one exists
+            const site = await getOrCreateDefaultSite(user.id);
+            if (site) {
+              setSites([site]);
+              setSiteId(site.id);
+            }
+          }
         }
       } catch (err) {
         console.error('Error initializing popup:', err);
@@ -437,6 +447,7 @@ export const PopupEditor: React.FC = () => {
           const { error } = await supabase
             .from('popups')
             .update({
+              site_id: siteId,
               name: popupName,
               type: popupType,
               layers: serializeLayers(layers),
@@ -467,7 +478,7 @@ export const PopupEditor: React.FC = () => {
     const interval = setInterval(saveToSupabase, 30000); // Check every 30s
 
     return () => clearInterval(interval);
-  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, iosToastMessages, iosToastIntervalMs, iosToastAutoHideMs, iosToastLoopCount, popupId, isLoading]);
+  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, iosToastMessages, iosToastIntervalMs, iosToastAutoHideMs, iosToastLoopCount, popupId, isLoading, siteId]);
 
 
   // Mark as unsaved on changes
@@ -586,6 +597,7 @@ export const PopupEditor: React.FC = () => {
         const { error } = await supabase
           .from('popups')
           .update({
+            site_id: siteId,
             name: popupName,
             type: popupType,
             layers: serializeLayers(layers),
@@ -663,6 +675,7 @@ export const PopupEditor: React.FC = () => {
         const { error } = await supabase
           .from('popups')
           .update({
+            site_id: siteId,
             name: popupName,
             type: popupType,
             layers: serializeLayers(layers),
@@ -1077,15 +1090,27 @@ export const PopupEditor: React.FC = () => {
             <ArrowLeft size={18} />
             Sair
           </button>
-          <div className="h-6 w-px bg-zinc-200"></div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-zinc-500">Nome do popup:</span>
             <input
               type="text"
               value={popupName}
               onChange={(e) => { setPopupName(e.target.value); setSaveStatus('unsaved'); }}
-              className="border-none bg-transparent hover:bg-zinc-50 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1 text-sm font-medium text-zinc-900 w-64 transition-all"
+              className="border-none bg-transparent hover:bg-zinc-50 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1 text-sm font-bold text-zinc-900 w-48 transition-all"
             />
+          </div>
+          <div className="h-6 w-px bg-zinc-200 mx-2"></div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-500">Site:</span>
+            <select
+              value={siteId || ''}
+              onChange={(e) => { setSiteId(e.target.value); setSaveStatus('unsaved'); }}
+              className="border-none bg-zinc-50 hover:bg-zinc-100 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1.5 text-sm font-medium text-zinc-700 w-48 transition-all cursor-pointer"
+            >
+              {sites.map(s => (
+                <option key={s.id} value={s.id}>{s.name || s.domain}</option>
+              ))}
+            </select>
           </div>
         </div>
         <div className="flex items-center gap-3">
