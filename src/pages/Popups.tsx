@@ -4,12 +4,13 @@ import {
   Plus, MoreHorizontal, Eye, MousePointerClick, TrendingUp,
   Monitor, Smartphone, Layers, Zap, PauseCircle, Copy, Trash2,
   BarChart3, ArrowUpRight, Sparkles, Filter, Search,
-  AlertCircle, CheckCircle
+  AlertCircle, CheckCircle, Lock
 } from 'lucide-react';
 import { Popup } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getOrCreateDefaultSite } from '../lib/sites';
+import { usePlan } from '../hooks/usePlan';
 
 // Removed mockPopups
 
@@ -77,6 +78,7 @@ const statusLabel: Record<string, string> = {
 export const Popups: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { canAddPopup, limits, usage } = usePlan();
   const [popups, setPopups] = useState<Popup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -175,16 +177,31 @@ export const Popups: React.FC = () => {
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-zinc-900">Popups</h1>
           <span className="text-xs font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
-            {isLoading ? '—' : `${popups.length} total`}
+            {isLoading ? '—' : `${popups.length} / ${limits.max_active_popups}`}
           </span>
         </div>
-        <button
-          onClick={() => navigate('/popups/editor')}
-          className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          Criar Popup
-        </button>
+        {canAddPopup ? (
+          <button
+            onClick={() => navigate('/popups/editor')}
+            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors text-sm"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Criar Popup
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              disabled
+              className="flex items-center gap-2 bg-zinc-100 text-zinc-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed border border-zinc-200"
+            >
+              <Lock size={14} /> Criar Popup
+            </button>
+            <span className="text-xs text-zinc-500 bg-zinc-100 border border-zinc-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <Zap size={12} className="text-brand-500" />
+              Limite do plano atingido
+            </span>
+          </div>
+        )}
       </header>
 
       <div className="flex-1 overflow-y-auto">

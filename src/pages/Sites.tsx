@@ -8,6 +8,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlan } from '../hooks/usePlan';
+import { getPlanDisplayName } from '../lib/plans';
 
 interface Site {
     id: string;
@@ -15,8 +17,6 @@ interface Site {
     domain: string;
     created_at: string;
 }
-
-const FREE_PLAN_LIMIT = 1;
 
 /* ─────────────────────────────────────────────
    DELETE CONFIRMATION MODAL
@@ -438,6 +438,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 export const Sites: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { plan, limits, canAddSite, refresh: refreshPlan } = usePlan();
     const [sites, setSites] = useState<Site[]>([]);
     const [loading, setLoading] = useState(true);
     const [deleteTarget, setDeleteTarget] = useState<Site | null>(null);
@@ -458,11 +459,16 @@ export const Sites: React.FC = () => {
         fetchSites();
     }, [user]);
 
-    const canAddMore = sites.length < FREE_PLAN_LIMIT;
+    const canAddMore = canAddSite;
 
     const handleAddSite = () => {
         localStorage.removeItem('onboarding_complete');
         navigate('/dashboard/onboarding');
+    };
+
+    const handleSiteChange = () => {
+        fetchSites();
+        refreshPlan();
     };
 
     return (
@@ -479,7 +485,7 @@ export const Sites: React.FC = () => {
                 <DeleteSiteModal
                     site={deleteTarget}
                     onClose={() => setDeleteTarget(null)}
-                    onDeleted={() => { setDeleteTarget(null); fetchSites(); }}
+                    onDeleted={() => { setDeleteTarget(null); handleSiteChange(); }}
                 />
             )}
 
@@ -489,7 +495,7 @@ export const Sites: React.FC = () => {
                     site={editTarget}
                     userId={user.id}
                     onClose={() => setEditTarget(null)}
-                    onUpdated={() => { setEditTarget(null); fetchSites(); }}
+                    onUpdated={() => { setEditTarget(null); handleSiteChange(); }}
                 />
             )}
 
@@ -538,11 +544,12 @@ export const Sites: React.FC = () => {
                             <div className="flex items-center gap-2 text-sm text-zinc-600 bg-white border border-zinc-200 rounded-xl px-4 py-2.5 shadow-sm">
                                 <CheckCircle2 size={15} className="text-green-500" />
                                 <span className="font-semibold text-zinc-900">{sites.length}</span>
+                                <span className="text-zinc-400">/ {limits.max_sites}</span>
                                 site{sites.length !== 1 ? 's' : ''} conectado{sites.length !== 1 ? 's' : ''}
                             </div>
                             <div className="flex items-center gap-2 text-sm text-zinc-400 bg-white border border-zinc-200 rounded-xl px-4 py-2.5 shadow-sm">
-                                <Clock size={15} />
-                                Plano atual: <span className="font-medium text-zinc-600">{FREE_PLAN_LIMIT} site{FREE_PLAN_LIMIT !== 1 ? 's' : ''} incluído{FREE_PLAN_LIMIT !== 1 ? 's' : ''}</span>
+                                <Zap size={15} className="text-brand-500" />
+                                Plano <span className="font-medium text-zinc-600">{getPlanDisplayName(plan)}</span>
                             </div>
                         </div>
 

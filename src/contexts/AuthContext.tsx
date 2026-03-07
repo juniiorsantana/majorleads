@@ -7,12 +7,13 @@ import React, {
 } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import type { PlanId } from '../lib/plans';
 
 export interface Profile {
     id: string;
     full_name: string | null;
     avatar_url: string | null;
-    plan: string;
+    plan: PlanId;
     email: string | null;
 }
 

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { getPlanDisplayName } from '../lib/plans';
 
 interface UserProfileDrawerProps {
   isOpen: boolean;
@@ -30,10 +31,13 @@ export const UserProfileDrawer: React.FC<UserProfileDrawerProps> = ({ isOpen, on
     onClose();
   };
 
-  const currentPlan = profile?.plan === 'pro' ? 'Plano Pro' : 'Plano Gratuito';
-  const planColor = profile?.plan === 'pro'
-    ? 'bg-brand-100 text-brand-700 border-brand-200'
-    : 'bg-zinc-100 text-zinc-700 border-zinc-200';
+  const currentPlan = `Plano ${getPlanDisplayName(profile?.plan)}`;
+  const planColorMap: Record<string, string> = {
+    starter: 'bg-zinc-100 text-zinc-700 border-zinc-200',
+    pro: 'bg-brand-100 text-brand-700 border-brand-200',
+    agency: 'bg-amber-100 text-amber-700 border-amber-200',
+  };
+  const planColor = planColorMap[profile?.plan || 'starter'] || planColorMap.starter;
 
   // Get initials
   const getInitials = (name: string) => {

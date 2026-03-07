@@ -8,6 +8,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlan } from '../hooks/usePlan';
+import { formatPriceBRL } from '../lib/plans';
 
 type Tab = 'perfil' | 'tracker' | 'integracoes' | 'plano' | 'seguranca';
 
@@ -252,66 +254,57 @@ const IntegracoesTab = () => {
     );
 };
 
-const PlanoTab = () => (
-    <div className="space-y-6 max-w-3xl">
-        {/* Current Plan */}
-        <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
-            <div className="flex items-start justify-between">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-base font-semibold text-zinc-900">Plano Pro</h3>
-                        <span className="bg-brand-100 text-brand-700 text-xs font-bold px-2 py-0.5 rounded-full">Ativo</span>
-                    </div>
-                    <p className="text-sm text-zinc-500">Próxima cobrança em <span className="font-medium text-zinc-700">15/03/2026</span></p>
-                </div>
-                <p className="text-2xl font-bold text-zinc-900">R$ 97<span className="text-sm font-normal text-zinc-500">/mês</span></p>
-            </div>
-            <div className="mt-6 pt-5 border-t border-zinc-100 grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                    { label: 'Visitantes/mês', val: '50.000', used: '12.483', pct: 25 },
-                    { label: 'Popups ativos', val: '20', used: '6', pct: 30 },
-                    { label: 'Leads capturados', val: '5.000', used: '1.832', pct: 37 },
-                    { label: 'Domínios', val: '5', used: '1', pct: 20 },
-                ].map((item) => (
-                    <div key={item.label}>
-                        <p className="text-xs text-zinc-500 mb-1">{item.label}</p>
-                        <p className="text-sm font-bold text-zinc-900">{item.used} <span className="text-zinc-400 font-normal">/ {item.val}</span></p>
-                        <div className="h-1.5 bg-zinc-100 rounded-full mt-1.5 overflow-hidden">
-                            <div className="h-full bg-brand-500 rounded-full" style={{ width: `${item.pct}%` }} />
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <div className="mt-5 flex gap-3">
-                <button className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors">Fazer upgrade</button>
-                <button className="px-4 py-2 border border-zinc-300 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg transition-colors">Gerenciar assinatura</button>
-            </div>
-        </div>
+const PlanoTab = () => {
+    const { plan, limits, usage, loading } = usePlan();
 
-        {/* Invoices */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/50">
-                <h3 className="text-sm font-semibold text-zinc-900">Histórico de faturas</h3>
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <Loader2 size={28} className="animate-spin text-zinc-400" />
             </div>
-            <div className="divide-y divide-zinc-50">
-                {[
-                    { date: '15 Fev 2026', val: 'R$ 97,00', status: 'Pago' },
-                    { date: '15 Jan 2026', val: 'R$ 97,00', status: 'Pago' },
-                    { date: '15 Dez 2025', val: 'R$ 97,00', status: 'Pago' },
-                ].map((inv) => (
-                    <div key={inv.date} className="flex items-center justify-between px-6 py-3 hover:bg-zinc-50 transition-colors">
-                        <span className="text-sm text-zinc-700">{inv.date}</span>
-                        <span className="text-sm font-medium text-zinc-900">{inv.val}</span>
-                        <div className="flex items-center gap-3">
-                            <span className="flex items-center gap-1 text-xs font-medium text-green-600"><CheckCircle2 size={12} /> {inv.status}</span>
-                            <button className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">PDF <ExternalLink size={11} /></button>
+        );
+    }
+
+    const usageItems = [
+        { label: 'Sites conectados', val: limits.max_sites >= 999 ? '∞' : String(limits.max_sites), used: String(usage.sites), pct: limits.max_sites >= 999 ? 1 : Math.round((usage.sites / limits.max_sites) * 100) },
+        { label: 'Popups ativos', val: limits.max_active_popups >= 999 ? '∞' : String(limits.max_active_popups), used: String(usage.activePopups), pct: limits.max_active_popups >= 999 ? 1 : Math.round((usage.activePopups / limits.max_active_popups) * 100) },
+        { label: 'Leads/mês', val: limits.max_leads >= 50000 ? '50.000' : limits.max_leads.toLocaleString('pt-BR'), used: usage.leads.toLocaleString('pt-BR'), pct: Math.round((usage.leads / limits.max_leads) * 100) },
+        { label: 'Pageviews/mês', val: limits.max_pageviews.toLocaleString('pt-BR'), used: '—', pct: 0 },
+    ];
+
+    return (
+        <div className="space-y-6 max-w-3xl">
+            {/* Current Plan */}
+            <div className="bg-white rounded-xl border border-zinc-200 p-6 shadow-sm">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-base font-semibold text-zinc-900">Plano {limits.name}</h3>
+                            <span className="bg-brand-100 text-brand-700 text-xs font-bold px-2 py-0.5 rounded-full">Ativo</span>
                         </div>
+                        <p className="text-sm text-zinc-500">Gerencie seu plano e veja o uso atual.</p>
                     </div>
-                ))}
+                    <p className="text-2xl font-bold text-zinc-900">{formatPriceBRL(limits.price_brl)}<span className="text-sm font-normal text-zinc-500">/mês</span></p>
+                </div>
+                <div className="mt-6 pt-5 border-t border-zinc-100 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {usageItems.map((item) => (
+                        <div key={item.label}>
+                            <p className="text-xs text-zinc-500 mb-1">{item.label}</p>
+                            <p className="text-sm font-bold text-zinc-900">{item.used} <span className="text-zinc-400 font-normal">/ {item.val}</span></p>
+                            <div className="h-1.5 bg-zinc-100 rounded-full mt-1.5 overflow-hidden">
+                                <div className={`h-full rounded-full ${item.pct > 80 ? 'bg-amber-500' : 'bg-brand-500'}`} style={{ width: `${Math.min(item.pct, 100)}%` }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="mt-5 flex gap-3">
+                    <button className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors">Fazer upgrade</button>
+                    <button className="px-4 py-2 border border-zinc-300 hover:bg-zinc-50 text-zinc-700 text-sm font-medium rounded-lg transition-colors">Gerenciar assinatura</button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const SegurancaTab = () => {
     const [showPass, setShowPass] = useState(false);
