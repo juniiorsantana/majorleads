@@ -4,12 +4,12 @@ import {
   Plus, MoreHorizontal, Eye, MousePointerClick, TrendingUp,
   Monitor, Smartphone, Layers, Zap, PauseCircle, Copy, Trash2,
   BarChart3, ArrowUpRight, Sparkles, Filter, Search,
-  AlertCircle, CheckCircle, Lock
+  AlertCircle, CheckCircle, Lock, Globe
 } from 'lucide-react';
 import { Popup } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { getOrCreateDefaultSite } from '../lib/sites';
+import { getOrCreateDefaultSite, getAllSites, Site } from '../lib/sites';
 import { usePlan } from '../hooks/usePlan';
 
 // Removed mockPopups
@@ -83,6 +83,9 @@ export const Popups: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sites, setSites] = useState<Site[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('all');
+  const [isLoadingSites, setIsLoadingSites] = useState(true);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null);
@@ -97,35 +100,62 @@ export const Popups: React.FC = () => {
   }, [deleteModal]);
 
   React.useEffect(() => {
-    const fetchPopups = async () => {
+    const loadSites = async () => {
       if (!user) return;
+      setIsLoadingSites(true);
+      let userSites = await getAllSites(user.id);
+      if (userSites.length === 0) {
+        const defaultSite = await getOrCreateDefaultSite(user.id);
+        if (defaultSite) {
+          userSites = [defaultSite];
+        }
+      }
+      setSites(userSites);
+      setIsLoadingSites(false);
+    };
+    loadSites();
+  }, [user]);
+
+  React.useEffect(() => {
+    const fetchPopups = async () => {
+      if (!user || isLoadingSites) return;
       setIsLoading(true);
       try {
-        const site = await getOrCreateDefaultSite(user.id);
+        let query = supabase
+          .from('popups')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        if (site) {
-          const { data, error } = await supabase
-            .from('popups')
-            .select('*')
-            .eq('site_id', site.id)
-            .order('created_at', { ascending: false });
-
-          if (error) throw error;
-
-          if (data) {
-            const mappedPopups: Popup[] = data.map(p => ({
-              id: p.id,
-              name: p.name,
-              trigger: p.trigger_config?.type || 'Not configured',
-              views: 0, // Placeholder
-              ctr: 0, // Placeholder
-              conversion: 0, // Placeholder
-              status: (p.status === 'active' ? 'Active' : p.status === 'paused' ? 'Paused' : 'Draft') as any,
-              platform: 'All', // Placeholder or derive from config
-              thumbnail: ''
-            }));
-            setPopups(mappedPopups);
+        if (selectedSiteId === 'all') {
+          const siteIds = sites.map(s => s.id);
+          if (siteIds.length > 0) {
+            query = query.in('site_id', siteIds);
+          } else {
+            setPopups([]);
+            setIsLoading(false);
+            return;
           }
+        } else {
+          query = query.eq('site_id', selectedSiteId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (data) {
+          const mappedPopups: Popup[] = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            trigger: p.trigger_config?.type || 'Not configured',
+            views: 0, // Placeholder
+            ctr: 0, // Placeholder
+            conversion: 0, // Placeholder
+            status: (p.status === 'active' ? 'Active' : p.status === 'paused' ? 'Paused' : 'Draft') as any,
+            platform: 'All', // Placeholder or derive from config
+            thumbnail: ''
+          }));
+          setPopups(mappedPopups);
         }
       } catch (err) {
         console.error('Error fetching popups:', err);
@@ -135,7 +165,7 @@ export const Popups: React.FC = () => {
     };
 
     fetchPopups();
-  }, [user]);
+  }, [user, isLoadingSites, sites, selectedSiteId]);
 
   const handleDelete = async () => {
     if (!deleteModal) return;
@@ -240,14 +270,31 @@ export const Popups: React.FC = () => {
 
             {/* Search + Filter */}
             <div className="ml-auto flex items-center gap-3">
+              <div className="relative min-w-[200px]">
+                <Globe size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 z-10 pointer-events-none" />
+                <select
+                  value={selectedSiteId}
+                  onChange={(e) => setSelectedSiteId(e.target.value)}
+                  className="pl-8 pr-10 py-2 text-sm font-medium text-zinc-900 border border-zinc-200 rounded-lg bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all appearance-none outline-none w-full relative z-0"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.75rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em` }}
+                >
+                  <option value="all" className="text-zinc-900 font-medium">Todos os Sites</option>
+                  {sites.map(site => (
+                    <option key={site.id} value={site.id} className="text-zinc-900 font-medium">
+                      {site.domain || site.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Buscar popup..."
-                  className="pl-8 pr-3 py-2 text-sm border border-zinc-200 rounded-lg bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent w-48 transition-all"
+                  className="pl-8 pr-3 py-2 text-sm text-zinc-900 border border-zinc-200 rounded-lg bg-zinc-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent w-48 transition-all"
                 />
               </div>
               <div className="flex bg-zinc-100 rounded-lg p-0.5">
