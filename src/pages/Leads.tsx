@@ -45,51 +45,49 @@ export const Leads: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sites, setSites] = useState<{ id: string; domain: string }[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>('all');
 
-  useEffect(() => {
-    const fetchLeads = async () => {
-      if (!user) return;
+  const fetchLeads = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      setError(null);
 
-      try {
-        setLoading(true);
-        setError(null);
+      const { data: sitesData, error: siteError } = await supabase
+        .from('sites')
+        .select('id, domain')
+        .eq('user_id', user.id);
 
-        // 1. First get the user's site
-        const { data: sites, error: siteError } = await supabase
-          .from('sites')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
+      if (siteError) throw siteError;
+      if (!sitesData || sitesData.length === 0) { setLeads([]); return; }
 
-        if (siteError) throw siteError;
+      setSites(sitesData);
+      const siteIds = sitesData.map(s => s.id);
 
-        if (!sites || sites.length === 0) {
-          setLeads([]);
-          return;
-        }
+      let query = supabase
+        .from('leads')
+        .select('id, name, email, whatsapp, device_type, utm_source, created_at')
+        .order('created_at', { ascending: false });
 
-        const siteId = sites[0].id;
-
-        // 2. Fetch leads for this site
-        const { data: leadsData, error: leadsError } = await supabase
-          .from('leads')
-          .select('id, name, email, whatsapp, device_type, utm_source, created_at')
-          .eq('site_id', siteId)
-          .order('created_at', { ascending: false });
-
-        if (leadsError) throw leadsError;
-
-        setLeads(leadsData || []);
-      } catch (err: any) {
-        console.error('Error fetching leads:', err);
-        setError('Ocorreu um erro ao carregar os leads.');
-      } finally {
-        setLoading(false);
+      if (selectedSiteId === 'all') {
+        query = query.in('site_id', siteIds);
+      } else {
+        query = query.eq('site_id', selectedSiteId);
       }
-    };
 
-    fetchLeads();
-  }, [user]);
+      const { data: leadsData, error: leadsError } = await query;
+      if (leadsError) throw leadsError;
+      setLeads(leadsData || []);
+    } catch (err: any) {
+      console.error('Error fetching leads:', err);
+      setError('Ocorreu um erro ao carregar os leads.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchLeads(); }, [user, selectedSiteId]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -134,13 +132,27 @@ export const Leads: React.FC = () => {
 
         <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm mb-6">
           <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-2.5 text-zinc-400" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar por nome, email ou telefone..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent placeholder-zinc-400"
-              />
+            <div className="flex-1 relative flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 text-zinc-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, email ou telefone..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent placeholder-zinc-400"
+                />
+              </div>
+              {sites.length > 1 && (
+                <select
+                  value={selectedSiteId}
+                  onChange={e => setSelectedSiteId(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-zinc-300 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                >
+                  <option value="all">Todos os sites</option>
+                  {sites.map(site => (
+                    <option key={site.id} value={site.id}>{site.domain}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </div>

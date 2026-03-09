@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { getOrCreateDefaultSite, getAllSites, Site } from '../lib/sites';
-import { usePlan } from '../hooks/usePlan';
-
+import { getOrCreateDefaultSite } from '../lib/sites';
 import {
   ArrowLeft,
   Cloud,
@@ -228,7 +226,6 @@ export const PopupEditor: React.FC = () => {
   const { user } = useAuth();
   const [popupId, setPopupId] = useState<string | null>(id || null);
   const [isLoading, setIsLoading] = useState(true);
-  const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState<string | null>(null);
 
   // --- State Management ---
@@ -267,6 +264,13 @@ export const PopupEditor: React.FC = () => {
 
   // Drag & Drop State
   const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
+
+  // Preview form state (simulates visitor filling inputs in popup)
+  const [previewInputValues, setPreviewInputValues] = useState<Record<string, string>>({});
+
+  // WhatsApp phone country selector
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState({ code: 'BR', dial: '55', flag: '🇧🇷', name: 'Brasil' });
 
   // Triggers & Actions (Simplified for this view)
   // Triggers & Actions
@@ -372,9 +376,13 @@ export const PopupEditor: React.FC = () => {
       try {
         setIsLoading(true);
 
-        // Load all user sites for the selector
-        const userSites = await getAllSites(user.id);
-        setSites(userSites);
+        // Ensure we have a site
+        const site = await getOrCreateDefaultSite(user.id);
+        if (!site) {
+          setShowToast({ message: 'Erro ao identificar o site. Tente novamente.', type: 'error' });
+          return;
+        }
+        setSiteId(site.id);
 
         if (popupId) {
           // Load existing
@@ -389,7 +397,6 @@ export const PopupEditor: React.FC = () => {
           if (data) {
             setPopupName(data.name);
             setPopupType(data.type as PopupType);
-            setSiteId(data.site_id);
             if (data.layers) setLayers(rehydrateLayerIcons(data.layers));
             if (data.trigger_config) setTriggerConfig(data.trigger_config);
             if (data.actions_config) setActions(data.actions_config);
@@ -408,17 +415,7 @@ export const PopupEditor: React.FC = () => {
             setIsPublished(data.status === 'active');
           }
         } else {
-          // New popup: set default site to the first available or let them choose
-          if (userSites.length > 0) {
-            setSiteId(userSites[0].id);
-          } else {
-            // Guarantee at least one exists
-            const site = await getOrCreateDefaultSite(user.id);
-            if (site) {
-              setSites([site]);
-              setSiteId(site.id);
-            }
-          }
+          setSiteId(site.id); // apenas guarda o siteId, nada é criado no banco
         }
       } catch (err) {
         console.error('Error initializing popup:', err);
@@ -447,7 +444,6 @@ export const PopupEditor: React.FC = () => {
           const { error } = await supabase
             .from('popups')
             .update({
-              site_id: siteId,
               name: popupName,
               type: popupType,
               layers: serializeLayers(layers),
@@ -478,7 +474,7 @@ export const PopupEditor: React.FC = () => {
     const interval = setInterval(saveToSupabase, 30000); // Check every 30s
 
     return () => clearInterval(interval);
-  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, iosToastMessages, iosToastIntervalMs, iosToastAutoHideMs, iosToastLoopCount, popupId, isLoading, siteId]);
+  }, [saveStatus, layers, popupName, popupType, triggerConfig, actions, iosToastMessages, iosToastIntervalMs, iosToastAutoHideMs, iosToastLoopCount, popupId, isLoading]);
 
 
   // Mark as unsaved on changes
@@ -597,7 +593,6 @@ export const PopupEditor: React.FC = () => {
         const { error } = await supabase
           .from('popups')
           .update({
-            site_id: siteId,
             name: popupName,
             type: popupType,
             layers: serializeLayers(layers),
@@ -675,7 +670,6 @@ export const PopupEditor: React.FC = () => {
         const { error } = await supabase
           .from('popups')
           .update({
-            site_id: siteId,
             name: popupName,
             type: popupType,
             layers: serializeLayers(layers),
@@ -706,6 +700,73 @@ export const PopupEditor: React.FC = () => {
     }
   };
 
+
+  // --- Phone Country Data ---
+  const COUNTRIES = [
+    { code: 'BR', dial: '55', flag: '🇧🇷', name: 'Brasil' },
+    { code: 'US', dial: '1', flag: '🇺🇸', name: 'EUA' },
+    { code: 'PT', dial: '351', flag: '🇵🇹', name: 'Portugal' },
+    { code: 'AR', dial: '54', flag: '🇦🇷', name: 'Argentina' },
+    { code: 'CO', dial: '57', flag: '🇨🇴', name: 'Colômbia' },
+    { code: 'MX', dial: '52', flag: '🇲🇽', name: 'México' },
+    { code: 'CL', dial: '56', flag: '🇨🇱', name: 'Chile' },
+    { code: 'PE', dial: '51', flag: '🇵🇪', name: 'Peru' },
+    { code: 'UY', dial: '598', flag: '🇺🇾', name: 'Uruguai' },
+    { code: 'PY', dial: '595', flag: '🇵🇾', name: 'Paraguai' },
+    { code: 'EC', dial: '593', flag: '🇪🇨', name: 'Equador' },
+    { code: 'VE', dial: '58', flag: '🇻🇪', name: 'Venezuela' },
+    { code: 'BO', dial: '591', flag: '🇧🇴', name: 'Bolívia' },
+    { code: 'ES', dial: '34', flag: '🇪🇸', name: 'Espanha' },
+    { code: 'GB', dial: '44', flag: '🇬🇧', name: 'Reino Unido' },
+    { code: 'DE', dial: '49', flag: '🇩🇪', name: 'Alemanha' },
+    { code: 'FR', dial: '33', flag: '🇫🇷', name: 'França' },
+    { code: 'IT', dial: '39', flag: '🇮🇹', name: 'Itália' },
+    { code: 'JP', dial: '81', flag: '🇯🇵', name: 'Japão' },
+    { code: 'AU', dial: '61', flag: '🇦🇺', name: 'Austrália' },
+    { code: 'CA', dial: '1', flag: '🇨🇦', name: 'Canadá' },
+    { code: 'IN', dial: '91', flag: '🇮🇳', name: 'Índia' },
+    { code: 'CN', dial: '86', flag: '🇨🇳', name: 'China' },
+    { code: 'AO', dial: '244', flag: '🇦🇴', name: 'Angola' },
+    { code: 'MZ', dial: '258', flag: '🇲🇿', name: 'Moçambique' },
+  ];
+
+  // Format phone number based on country
+  const formatPhoneNumber = (digits: string, countryCode: string): string => {
+    if (countryCode === 'BR') {
+      // Brazilian format: (XX) XXXXX-XXXX or (XX) XXXX-XXXX
+      if (digits.length <= 2) return digits.length ? `(${digits}` : '';
+      if (digits.length <= 6) return `(${digits.slice(0,2)}) ${digits.slice(2)}`;
+      if (digits.length <= 10) return `(${digits.slice(0,2)}) ${digits.slice(2,6)}-${digits.slice(6)}`;
+      return `(${digits.slice(0,2)}) ${digits.slice(2,7)}-${digits.slice(7,11)}`;
+    }
+    if (countryCode === 'US' || countryCode === 'CA') {
+      if (digits.length <= 3) return digits.length ? `(${digits}` : '';
+      if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+      return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6,10)}`;
+    }
+    // Generic: group in blocks of 4
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  };
+
+  const handleWhatsappNumberChange = (rawInput: string) => {
+    const digits = rawInput.replace(/\D/g, '').slice(0, 11);
+    const formatted = formatPhoneNumber(digits, selectedCountry.code);
+    const fullNumber = `+${selectedCountry.dial}${digits}`;
+    handleActionChange({ whatsapp: { ...actions.whatsapp, number: fullNumber, _displayNumber: formatted } as any });
+  };
+
+  // --- Preview form validation ---
+  const getRequiredInputLayers = () => layers.filter(l => l.type === 'input_field' && l.props.required);
+  const isPreviewButtonEnabled = () => {
+    const required = getRequiredInputLayers();
+    if (required.length === 0) return true;
+    return required.every(l => {
+      const val = previewInputValues[l.id] || '';
+      if (l.props.fieldType === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      if (l.props.fieldType === 'phone') return val.replace(/\D/g, '').length >= 8;
+      return val.trim().length >= 2;
+    });
+  };
 
   // --- Render Helpers ---
   const renderLayerProperties = () => {
@@ -1090,27 +1151,15 @@ export const PopupEditor: React.FC = () => {
             <ArrowLeft size={18} />
             Sair
           </button>
+          <div className="h-6 w-px bg-zinc-200"></div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-zinc-500">Nome do popup:</span>
             <input
               type="text"
               value={popupName}
               onChange={(e) => { setPopupName(e.target.value); setSaveStatus('unsaved'); }}
-              className="border-none bg-transparent hover:bg-zinc-50 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1 text-sm font-bold text-zinc-900 w-48 transition-all"
+              className="border-none bg-transparent hover:bg-zinc-50 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1 text-sm font-medium text-zinc-900 w-64 transition-all"
             />
-          </div>
-          <div className="h-6 w-px bg-zinc-200 mx-2"></div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-500">Site:</span>
-            <select
-              value={siteId || ''}
-              onChange={(e) => { setSiteId(e.target.value); setSaveStatus('unsaved'); }}
-              className="border-none bg-zinc-50 hover:bg-zinc-100 focus:bg-white focus:ring-1 focus:ring-brand-500 rounded px-2 py-1.5 text-sm font-medium text-zinc-700 w-48 transition-all cursor-pointer"
-            >
-              {sites.map(s => (
-                <option key={s.id} value={s.id}>{s.name || s.domain}</option>
-              ))}
-            </select>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -1672,10 +1721,15 @@ export const PopupEditor: React.FC = () => {
                             const FieldIcon = layer.props.fieldType === 'email' ? Mail : layer.props.fieldType === 'phone' ? Phone : User;
                             const inputType = layer.props.fieldType === 'email' ? 'email' : layer.props.fieldType === 'phone' ? 'tel' : 'text';
                             const isSelected = selectedLayerId === layer.id;
+                            const currentVal = previewInputValues[layer.id] || '';
+                            const hasError = layer.props.required && currentVal.length > 0 && (
+                              layer.props.fieldType === 'email' ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentVal) :
+                              layer.props.fieldType === 'phone' ? currentVal.replace(/\D/g, '').length < 8 : false
+                            );
                             return (
                               <div
                                 key={layer.id}
-                                className={`px-6 py-2 cursor-pointer transition-all ${isSelected ? 'ring-2 ring-brand-500 ring-offset-2' : 'hover:ring-2 hover:ring-brand-500/30 hover:ring-offset-1'} rounded-lg mx-2`}
+                                className={`px-6 py-2 transition-all ${isSelected ? 'ring-2 ring-brand-500 ring-offset-2' : 'hover:ring-2 hover:ring-brand-500/30 hover:ring-offset-1'} rounded-lg mx-2`}
                                 onClick={(e) => { e.stopPropagation(); setSelectedLayerId(layer.id); }}
                               >
                                 <label className="text-xs font-medium text-zinc-600 mb-1.5 flex items-center gap-1.5">
@@ -1690,10 +1744,30 @@ export const PopupEditor: React.FC = () => {
                                   <input
                                     type={inputType}
                                     placeholder={layer.props.placeholder}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-zinc-200 text-sm bg-white text-zinc-500 pointer-events-none"
-                                    readOnly
+                                    value={currentVal}
+                                    onChange={(e) => {
+                                      let val = e.target.value;
+                                      if (layer.props.fieldType === 'phone') {
+                                        val = val.replace(/\D/g, '').slice(0, 11);
+                                        val = formatPhoneNumber(val, 'BR');
+                                      }
+                                      setPreviewInputValues(prev => ({ ...prev, [layer.id]: val }));
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className={`w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm bg-white transition-colors ${hasError ? 'border-red-400 focus:ring-red-400' : currentVal ? 'border-green-400' : 'border-zinc-200'} focus:outline-none focus:ring-2 focus:ring-brand-400`}
                                   />
+                                  {currentVal && !hasError && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500">
+                                      <Check size={14} />
+                                    </div>
+                                  )}
                                 </div>
+                                {hasError && (
+                                  <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
+                                    <AlertTriangle size={10} />
+                                    {layer.props.fieldType === 'email' ? 'E-mail inválido' : 'Número inválido'}
+                                  </p>
+                                )}
                               </div>
                             );
                           }
@@ -1742,23 +1816,36 @@ export const PopupEditor: React.FC = () => {
                           }
 
                           if (layer.type === 'button') {
+                            const btnEnabled = isPreviewButtonEnabled();
                             return (
                               <div
                                 key={layer.id}
                                 className={`px-8 pb-8 cursor-pointer transition-all ${selectionStyle} rounded-lg mx-2 mb-2`}
                                 onClick={(e) => { e.stopPropagation(); setSelectedLayerId(layer.id); }}
                               >
-                                <button style={{
-                                  width: '100%',
-                                  backgroundColor: layer.props.backgroundColor,
-                                  color: layer.props.color,
-                                  borderRadius: `${layer.props.borderRadius}px`,
-                                  padding: '12px',
-                                  fontWeight: 600,
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                                }}>
+                                <button
+                                  style={{
+                                    width: '100%',
+                                    backgroundColor: btnEnabled ? layer.props.backgroundColor : '#d4d4d8',
+                                    color: btnEnabled ? layer.props.color : '#a1a1aa',
+                                    borderRadius: `${layer.props.borderRadius}px`,
+                                    padding: '12px',
+                                    fontWeight: 600,
+                                    boxShadow: btnEnabled ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                                    cursor: btnEnabled ? 'pointer' : 'not-allowed',
+                                    transition: 'all 0.2s ease',
+                                  }}
+                                  disabled={!btnEnabled}
+                                  title={!btnEnabled ? 'Preencha os campos obrigatórios' : undefined}
+                                >
                                   {layer.props.text}
                                 </button>
+                                {!btnEnabled && getRequiredInputLayers().length > 0 && (
+                                  <p className="text-[10px] text-zinc-400 text-center mt-1.5 flex items-center justify-center gap-1">
+                                    <AlertTriangle size={10} />
+                                    Preencha os campos obrigatórios para continuar
+                                  </p>
+                                )}
                               </div>
                             );
                           }
@@ -2209,25 +2296,70 @@ export const PopupEditor: React.FC = () => {
                 {/* WhatsApp Config */}
                 {actions.type === 'whatsapp' && (
                   <div className="animate-in slide-in-from-top-2 duration-300">
-                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">ConfiguraÃ§Ã£o WhatsApp</h3>
+                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">Configuração WhatsApp</h3>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-xs font-medium text-zinc-700 mb-1.5 block">NÃºmero WhatsApp <span className="text-red-500">*</span></label>
-                        <input
-                          type="tel"
-                          value={actions.whatsapp?.number || ''}
-                          onChange={(e) => handleActionChange({ whatsapp: { ...actions.whatsapp, number: e.target.value } as any })}
-                          placeholder="+55 11 99999-9999"
-                          className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                        />
+                        <label className="text-xs font-medium text-zinc-700 mb-1.5 block">Número WhatsApp <span className="text-red-500">*</span></label>
+                        <div className="flex gap-2">
+                          {/* Country picker button */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowCountryPicker(prev => !prev)}
+                              className="h-full px-2.5 py-2 rounded-lg border border-zinc-300 text-sm bg-white hover:bg-zinc-50 flex items-center gap-1.5 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                            >
+                              <span className="text-base leading-none">{selectedCountry.flag}</span>
+                              <span className="text-zinc-500 text-xs font-mono">+{selectedCountry.dial}</span>
+                              <ChevronDown size={12} className="text-zinc-400" />
+                            </button>
+                            {showCountryPicker && (
+                              <div className="absolute left-0 top-full mt-1 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                                <div className="max-h-48 overflow-y-auto">
+                                  {COUNTRIES.map(c => (
+                                    <button
+                                      key={c.code}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedCountry(c);
+                                        setShowCountryPicker(false);
+                                        // Update the stored number with new dial code
+                                        const digits = (actions.whatsapp?._displayNumber || '').replace(/\D/g, '');
+                                        handleActionChange({ whatsapp: { ...actions.whatsapp, number: `+${c.dial}${digits}`, _displayNumber: formatPhoneNumber(digits, c.code) } as any });
+                                      }}
+                                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-zinc-50 transition-colors ${selectedCountry.code === c.code ? 'bg-brand-50 text-brand-700 font-medium' : 'text-zinc-700'}`}
+                                    >
+                                      <span className="text-base">{c.flag}</span>
+                                      <span className="flex-1 text-left">{c.name}</span>
+                                      <span className="text-zinc-400 font-mono">+{c.dial}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {/* Phone number input - numbers only, auto formatted */}
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={(actions.whatsapp as any)?._displayNumber || ''}
+                            onChange={(e) => handleWhatsappNumberChange(e.target.value)}
+                            placeholder={selectedCountry.code === 'BR' ? '(11) 99999-9999' : selectedCountry.code === 'US' ? '(555) 000-0000' : '00000-0000'}
+                            className="flex-1 px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono"
+                          />
+                        </div>
+                        {actions.whatsapp?.number && (
+                          <p className="text-[10px] text-zinc-400 mt-1 font-mono">
+                            Número completo: {actions.whatsapp.number}
+                          </p>
+                        )}
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-zinc-700 mb-1.5 block">Mensagem prÃ©-definida</label>
+                        <label className="text-xs font-medium text-zinc-700 mb-1.5 block">Mensagem pré-definida</label>
                         <textarea
                           rows={3}
                           value={actions.whatsapp?.message || ''}
                           onChange={(e) => handleActionChange({ whatsapp: { ...actions.whatsapp, message: e.target.value } as any })}
-                          placeholder="OlÃ¡! Vi a oferta e quero saber mais."
+                          placeholder="Olá! Vi a oferta e quero saber mais."
                           className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 resize-none"
                         />
                       </div>
