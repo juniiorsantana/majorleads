@@ -27,8 +27,9 @@ export const UTMReportTab: React.FC<UTMReportTabProps> = ({ dateRange }) => {
             if (!user) return;
             setIsLoading(true);
             try {
-                const { data: site } = await supabase.from('sites').select('id').eq('user_id', user.id).single();
-                if (!site) return;
+                const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id);
+                if (!sites || sites.length === 0) return;
+                const siteIds = sites.map((s) => s.id);
 
                 const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
                 const startDate = startOfDay(subDays(new Date(), days - 1));
@@ -42,7 +43,7 @@ export const UTMReportTab: React.FC<UTMReportTabProps> = ({ dateRange }) => {
                 const { data: leads, error } = await supabase
                     .from('leads')
                     .select('utm_source, utm_medium, utm_campaign')
-                    .eq('site_id', site.id)
+                    .in('site_id', siteIds)
                     .gte('created_at', format(startDate, 'yyyy-MM-dd'));
 
                 if (error) throw error;

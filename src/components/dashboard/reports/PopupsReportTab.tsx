@@ -39,28 +39,24 @@ export const PopupsReportTab: React.FC<PopupsReportTabProps> = ({ dateRange }) =
             setIsLoading(true);
 
             try {
-                const { data: site } = await supabase.from('sites').select('id').eq('user_id', user.id).single();
-                if (!site) return;
+                const { data: sites } = await supabase.from('sites').select('id').eq('user_id', user.id);
+                if (!sites || sites.length === 0) return;
+                const siteIds = sites.map((s) => s.id);
 
                 const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
                 const startDate = startOfDay(subDays(new Date(), days - 1));
 
                 // 1. Fetch Popups
-                const { data: popups } = await supabase.from('popups').select('id, name, status').eq('site_id', site.id);
+                const { data: popups } = await supabase.from('popups').select('id, name, status').in('site_id', siteIds);
                 const popupsMap = new Map(popups?.map(p => [p.id, { ...p, views: 0, clicks: 0, conversions: 0 }]));
 
-                // 2. Fetch Events for these popups
-                const { data: events } = await supabase
-                    .from('events')
-                    .select('event, timestamp, properties')
-                    .gte('timestamp', startDate.getTime());
-
-                // 3. Fetch Leads
-                const { data: leads } = await supabase
-                    .from('leads')
-                    .select('id, created_at, popup_id')
-                    .eq('site_id', site.id)
-                    .gte('created_at', format(startDate, 'yyyy-MM-dd'));
+                // 2. Fetch Stats
+                const { data: stats } = await supabase
+                    .from('popup_stats')
+                    .select('popup_id, date, views, clicks, conversions')
+                    .in('site_id', siteIds)
+                    .gte('date', startDate.toISOString().slice(0, 10))
+                    .order('date', { ascending: true });
 
                 const timeSeriesMap: Record<string, { views: number, convs: number }> = {};
                 for (let i = days - 1; i >= 0; i--) {
@@ -69,38 +65,32 @@ export const PopupsReportTab: React.FC<PopupsReportTabProps> = ({ dateRange }) =
 
                 let totalV = 0, totalC = 0, totalConv = 0;
 
-                // Process Events
-                if (events) {
-                    events.forEach(ev => {
-                        const popup_id = ev.properties?.popup_id;
-                        if (!popup_id || !popupsMap.has(popup_id)) return;
-
-                        const ts = parseInt(ev.timestamp) || 0;
-                        const dayKey = ts > 0 ? format(new Date(ts), 'dd MMM') : null;
+                if (stats) {
+                    for (const row of stats) {
+                        const popup_id = row.popup_id;
+                        if (!popupsMap.has(popup_id)) continue;
 
                         const p = popupsMap.get(popup_id)!;
-                        if (ev.event === 'popup_view') {
-                            p.views++; totalV++;
-                            if (dayKey && timeSeriesMap[dayKey]) timeSeriesMap[dayKey].views++;
-                        }
-                        if (['popup_click'].includes(ev.event)) {
-                            p.clicks++; totalC++;
-                        }
-                    });
-                }
+                        p.views += row.views;
+                        p.clicks += row.clicks;
+                        p.conversions += row.conversions;
 
-                // Process Leads
-                if (leads) {
-                    leads.forEach(lead => {
-                        const popup_id = lead.popup_id;
-                        if (popup_id && popupsMap.has(popup_id)) {
-                            popupsMap.get(popup_id)!.conversions++;
-                        }
-                        totalConv++; // Count all leads for total conversions
+                        totalV += row.views;
+                        totalC += row.clicks;
+                        totalConv += row.conversions;
 
-                        const dayKey = format(new Date(lead.created_at), 'dd MMM');
-                        if (timeSeriesMap[dayKey]) timeSeriesMap[dayKey].convs++;
-                    });
+                        // Parse string 'YYYY-MM-DD' correctly accounting for local timezone 
+                        // by creating an explicit date. Or just slice to be safe: 
+                        // '2026-03-15' -> Date object
+                        const parts = row.date.split('-');
+                        const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        const dayKey = format(dateObj, 'dd MMM');
+                        
+                        if (timeSeriesMap[dayKey]) {
+                            timeSeriesMap[dayKey].views += row.views;
+                            timeSeriesMap[dayKey].convs += row.conversions;
+                        }
+                    }
                 }
 
                 const formattedPopups = Array.from(popupsMap.values()).map(row => ({

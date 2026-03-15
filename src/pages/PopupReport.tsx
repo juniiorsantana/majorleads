@@ -51,37 +51,32 @@ export const PopupReport: React.FC = () => {
                 if (dateFilter === '7d') startDate = startOfDay(subDays(new Date(), 6));
                 else if (dateFilter === '30d') startDate = startOfDay(subDays(new Date(), 29));
 
-                // Views & Clicks (from events)
-                // Assuming events table has a JSONB generic `properties` column or `popup_id` column
-                // Given previous architecture we used: properties->>'popup_id' = id OR we tracked views on the popup directly.
-                // Let's assume we read from the popups table directly if we don't have events mapped strictly:
-                // but since this is a dashboard, we need time-series. We'll query events table.
-                const { data: eventsData, error: evError } = await supabase
-                    .from('events')
-                    .select('event, timestamp, properties')
-                    .gte('timestamp', startDate.getTime())
-                // Try to filter directly if popup_id is stored in properties
-                // If this fails due to no index, we'll fetch all and filter in JS.
-                // .contains('properties', { popup_id: id }); 
+                // Fetch Aggregated Stats
+                const { data: statsData, error: statsError } = await supabase
+                    .from('popup_stats')
+                    .select('date, views, clicks, conversions')
+                    .eq('popup_id', id)
+                    .gte('date', startDate.toISOString().slice(0, 10))
+                    .order('date', { ascending: true });
 
-                if (evError) console.warn('No events found or error', evError);
+                if (statsError) console.warn('No stats found or error', statsError);
 
-                // Leads (from leads table)
+                // Leads (from leads table) ONLY for recent leads display
                 const { data: leadsData, error: ldError } = await supabase
                     .from('leads')
                     .select('id, name, email, created_at, source_url')
                     .eq('popup_id', id)
-                    .gte('created_at', format(startDate, 'yyyy-MM-dd'))
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .limit(5);
 
                 if (ldError) console.warn('No leads found or error', ldError);
 
-                setRecentLeads(leadsData?.slice(0, 5) || []);
+                setRecentLeads(leadsData || []);
 
                 // Aggregate stats
-                // We'll filter events client-side securely for this user's popup
                 let totalViews = 0;
                 let totalClicks = 0;
+                let totalLeads = 0; // conversions
                 let dailyStats: Record<string, { views: number, leads: number }> = {};
 
                 // Initialize default days for the chart
@@ -93,46 +88,24 @@ export const PopupReport: React.FC = () => {
                     }
                 }
 
-                if (eventsData) {
-                    eventsData.forEach((ev: any) => {
-                        // Fallback check if properties contains our popup_id
-                        const pId = ev.properties?.popup_id;
-                        if (pId === id) {
-                            if (ev.event === 'popup_view') totalViews++;
-                            if (ev.event === 'popup_click') totalClicks++;
+                if (statsData) {
+                    statsData.forEach((row) => {
+                        totalViews += row.views;
+                        totalClicks += row.clicks;
+                        totalLeads += row.conversions;
 
-                            if (ev.event === 'popup_view' && daysToGen > 0) {
-                                const dayKey = format(new Date(parseInt(ev.timestamp) || ev.timestamp), 'dd MMM');
-                                if (dailyStats[dayKey]) dailyStats[dayKey].views++;
-                            }
+                        const parts = row.date.split('-');
+                        const dateObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        const dayKey = format(dateObj, 'dd MMM');
+
+                        if (!dailyStats[dayKey] && daysToGen === 0) {
+                            dailyStats[dayKey] = { views: 0, leads: 0 };
+                        }
+                        if (dailyStats[dayKey]) {
+                            dailyStats[dayKey].views += row.views;
+                            dailyStats[dayKey].leads += row.conversions;
                         }
                     });
-                }
-
-                const totalLeads = leadsData?.length || 0;
-                if (leadsData && daysToGen > 0) {
-                    leadsData.forEach((ld: any) => {
-                        const dayKey = format(parseISO(ld.created_at), 'dd MMM');
-                        if (dailyStats[dayKey]) dailyStats[dayKey].leads++;
-                    });
-                }
-
-                // If daysToGen is 0 ('all' time), group dynamically
-                if (daysToGen === 0 && eventsData) {
-                    eventsData.forEach((ev: any) => {
-                        if (ev.properties?.popup_id === id && ev.event === 'popup_view') {
-                            const dayKey = format(new Date(parseInt(ev.timestamp)), 'dd MMM');
-                            if (!dailyStats[dayKey]) dailyStats[dayKey] = { views: 0, leads: 0 };
-                            dailyStats[dayKey].views++;
-                        }
-                    });
-                    if (leadsData) {
-                        leadsData.forEach((ld: any) => {
-                            const dayKey = format(parseISO(ld.created_at), 'dd MMM');
-                            if (!dailyStats[dayKey]) dailyStats[dayKey] = { views: 0, leads: 0 };
-                            dailyStats[dayKey].leads++;
-                        });
-                    }
                 }
 
                 const cRate = totalViews > 0 ? (totalLeads / totalViews) * 100 : 0;

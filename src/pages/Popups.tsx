@@ -144,17 +144,37 @@ export const Popups: React.FC = () => {
         if (error) throw error;
 
         if (data) {
-          const mappedPopups: Popup[] = data.map(p => ({
-            id: p.id,
-            name: p.name,
-            trigger: p.trigger_config?.type || 'Not configured',
-            views: 0, // Placeholder
-            ctr: 0, // Placeholder
-            conversion: 0, // Placeholder
-            status: (p.status === 'active' ? 'Active' : p.status === 'paused' ? 'Paused' : 'Draft') as any,
-            platform: 'All', // Placeholder or derive from config
-            thumbnail: ''
-          }));
+          const popupIds = data.map(p => p.id);
+          
+          const { data: statsRows } = await supabase
+             .from('popup_stats')
+             .select('popup_id, views, clicks, conversions')
+             .in('popup_id', popupIds);
+             
+          const statsMap: Record<string, { views: number, clicks: number, conversions: number }> = {};
+          if (statsRows) {
+            statsRows.forEach(row => {
+               if (!statsMap[row.popup_id]) statsMap[row.popup_id] = { views: 0, clicks: 0, conversions: 0 };
+               statsMap[row.popup_id].views += row.views;
+               statsMap[row.popup_id].clicks += row.clicks;
+               statsMap[row.popup_id].conversions += row.conversions;
+            });
+          }
+
+          const mappedPopups: Popup[] = data.map(p => {
+            const s = statsMap[p.id] || { views: 0, clicks: 0, conversions: 0 };
+            return {
+              id: p.id,
+              name: p.name,
+              trigger: p.trigger_config?.type || 'Not configured',
+              views: s.views,
+              ctr: s.views > 0 ? Number(((s.clicks / s.views) * 100).toFixed(1)) : 0,
+              conversion: s.views > 0 ? Number(((s.conversions / s.views) * 100).toFixed(1)) : 0,
+              status: (p.status === 'active' ? 'Active' : p.status === 'paused' ? 'Paused' : 'Draft') as any,
+              platform: 'All', // Placeholder or derive from config
+              thumbnail: ''
+            };
+          });
           setPopups(mappedPopups);
         }
       } catch (err) {

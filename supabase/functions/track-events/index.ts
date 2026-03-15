@@ -220,6 +220,29 @@ serve(async (req) => {
             throw new Error(`Database error: ${insertError.message || JSON.stringify(insertError)}`)
         }
 
+        // NEW: aggregate popup stats
+        for (const row of validRows) {
+            const popupId = row.properties?.popup_id;
+            if (popupId && ['popup_shown', 'popup_clicked', 'popup_converted'].includes(row.event)) {
+                const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+                const col =
+                    row.event === 'popup_shown'     ? 'views' :
+                    row.event === 'popup_clicked'   ? 'clicks' :
+                    'conversions';
+
+                // Use raw SQL increment to avoid race conditions:
+                const { error: rpcError } = await supabase.rpc('increment_popup_stat', {
+                    p_popup_id: popupId,
+                    p_site_id: site.id,
+                    p_date: today,
+                    p_col: col,
+                });
+                if (rpcError) {
+                    console.error("Error incrementing popup_stat", rpcError);
+                }
+            }
+        }
+
         // 4. Webhook Dispatch
         try {
             const { data: webhooks } = await supabase

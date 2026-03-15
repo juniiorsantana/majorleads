@@ -29,13 +29,13 @@ export const Reports: React.FC = () => {
 
             try {
                 // Get user's site
-                const { data: site } = await supabase
+                const { data: sites } = await supabase
                     .from('sites')
                     .select('id')
-                    .eq('user_id', user.id)
-                    .single();
+                    .eq('user_id', user.id);
 
-                if (!site) return;
+                if (!sites || sites.length === 0) return;
+                const siteIds = sites.map((s) => s.id);
 
                 const days = dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
                 const startDate = startOfDay(subDays(new Date(), days - 1));
@@ -44,13 +44,13 @@ export const Reports: React.FC = () => {
                 const { data: events } = await supabase
                     .from('events')
                     .select('event, timestamp, properties')
-                    .gte('timestamp', startDate.getTime());
+                    .gte('timestamp', startDate.toISOString());
 
                 // 2. Fetch Leads
                 const { data: leads } = await supabase
                     .from('leads')
                     .select('id, created_at, utm_source')
-                    .eq('site_id', site.id)
+                    .in('site_id', siteIds)
                     .gte('created_at', format(startDate, 'yyyy-MM-dd'));
 
                 let v = 0; let a = 0;
